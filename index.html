@@ -7,6 +7,1691 @@
 <meta name="description" content="Genroll Studio — one creative console for image, video and audio models.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================ tokens ============================ */
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#0b0c1a;
+  --tx:#f2f3fb;
+  --mut:#9aa0bd;
+  --dim:#6b7196;
+  /* one accent only - pure orange */
+  --or:#ff7a18;
+  --or-2:#ff9c4d;
+  --or-3:#ffbe8a;
+  --tl:#ff9c4d;
+  --grad:var(--or);
+  --grad-2:var(--or);
+  --glass:rgba(255,255,255,.035);
+  --glass-2:rgba(255,255,255,.062);
+  --glass-3:rgba(255,255,255,.095);
+  --bd:rgba(255,255,255,.072);
+  --bd-2:rgba(255,255,255,.15);
+  --hair:inset 0 1px 0 rgba(255,255,255,.055);
+  --solid:#15162c;
+  --solid-2:#1e2040;
+  --shadow:0 26px 64px -30px rgba(0,0,0,.9);
+  --r-lg:20px; --r:14px; --r-sm:10px;
+  --ok:#f2f3fb; --warn:#ffb648; --bad:#ff7a7a;
+  color-scheme:dark;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg); color:var(--tx);
+  font-size:15px; line-height:1.55;
+  min-height:100vh; overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* ambient blobs */
+body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0}
+body::before{
+  background:
+    radial-gradient(56rem 40rem at 4% -10%, rgba(255,122,24,.26), transparent 62%),
+    radial-gradient(44rem 34rem at 98% -4%, rgba(255,150,60,.11), transparent 60%);
+}
+body::after{
+  background:
+    radial-gradient(64rem 48rem at 50% 122%, rgba(255,122,24,.10), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.018), transparent 26%);
+}
+/* film grain */
+html::before{
+  content:"";position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.55'/></svg>");
+}
+img{max-width:100%}
+[hidden]{display:none!important}
+::selection{background:rgba(255,122,24,.32);color:#fff}
+/* scrollbars */
+*::-webkit-scrollbar{width:9px;height:9px}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:99px}
+*::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.24)}
+*::-webkit-scrollbar-track{background:transparent}
+
+/* ============================ primitives ============================ */
+.wrap{position:relative;z-index:1;max-width:1420px;margin:0 auto;padding:0 20px}
+.glass{
+  background:var(--glass);
+  border:1px solid var(--bd);
+  border-radius:var(--r);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+  backdrop-filter:blur(18px) saturate(150%);
+  box-shadow:var(--hair), var(--shadow);
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.lbl{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);display:block;margin:0 0 7px;font-weight:500;
+}
+.h-anton{font-family:Anton,Impact,sans-serif;text-transform:uppercase;letter-spacing:.012em;font-weight:400;line-height:.98}
+.h-script{
+  font-family:Caveat,cursive;font-style:italic;font-weight:700;text-transform:none;
+  color:var(--or);letter-spacing:0;line-height:1;
+}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--or);display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;
+}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--grad-2)}
+
+/* page headings */
+.page-head{margin:0 0 6px}
+.page-head .h-anton{font-size:clamp(28px,4.4vw,46px)}
+.page-head .h-script{font-size:clamp(34px,5.4vw,58px);margin-left:.14em}
+.page-sub{color:var(--mut);max-width:62ch;margin:0 0 26px;font-size:14.5px}
+
+/* buttons */
+.btn{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.06em;font-weight:500;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 16px;border-radius:var(--r-sm);cursor:pointer;
+  border:1px solid var(--bd-2);color:var(--tx);
+  background:var(--glass-2);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  transition:.18s ease; text-decoration:none; white-space:nowrap;
+}
+.btn:hover{background:var(--glass-3);border-color:rgba(255,255,255,.3);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-primary{
+  border:none;color:#150c02;font-weight:600;
+  background:var(--or);
+  box-shadow:0 10px 26px -12px rgba(255,122,24,.75), inset 0 1px 0 rgba(255,255,255,.3);
+}
+.btn-primary:hover{background:var(--or-2);box-shadow:0 14px 32px -12px rgba(255,122,24,.85)}
+.btn-lg{padding:14px 22px;font-size:13px}
+.btn-block{width:100%}
+.btn[disabled],.btn.is-off{opacity:.55;cursor:not-allowed;transform:none!important}
+
+/* chips */
+.chip{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.04em;
+  padding:7px 12px;border-radius:99px;border:1px solid var(--bd);
+  background:var(--glass);color:var(--mut);cursor:pointer;transition:.16s;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.chip:hover{color:var(--tx);border-color:var(--bd-2);background:var(--glass-2)}
+.chip[aria-pressed="true"]{
+  color:#150c02;font-weight:600;border-color:transparent;background:var(--or);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28);
+}
+
+/* badges */
+.badge{
+  font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  padding:4px 9px;border-radius:99px;display:inline-flex;align-items:center;gap:5px;font-weight:500;
+  border:1px solid var(--bd);background:var(--glass-2);color:var(--mut);white-space:nowrap;
+}
+.badge .dot{width:5px;height:5px;border-radius:99px;background:currentColor;flex:none}
+.badge-verified{color:#f2f3fb;border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.10)}
+.badge-partial{color:#ffcf8f;border-color:rgba(255,182,72,.38);background:rgba(255,182,72,.12)}
+.badge-unverified{color:#ffb0b0;border-color:rgba(255,122,122,.36);background:rgba(255,122,122,.12)}
+.badge-grad{
+  color:#150c02;font-weight:700;border:none;background:var(--or);
+}
+
+/* inputs */
+.field{margin-bottom:15px}
+input[type=text],input[type=number],textarea,select{
+  width:100%;font-family:"IBM Plex Sans",sans-serif;font-size:14px;color:var(--tx);
+  border:1px solid var(--bd);border-radius:var(--r-sm);padding:11px 13px;
+  background:var(--glass);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  outline:none;transition:.16s;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:rgba(255,122,24,.55);box-shadow:0 0 0 3px rgba(255,122,24,.13);background:var(--glass-2)
+}
+textarea{resize:vertical;min-height:112px;line-height:1.6}
+::placeholder{color:var(--dim)}
+/* native selects: SOLID, never blurred, so options stay legible */
+select{
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background-color:var(--solid);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239aa0bd' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat:no-repeat;background-position:right 12px center;
+  -webkit-appearance:none;appearance:none;padding-right:38px;cursor:pointer;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;
+}
+select option,select optgroup{background-color:var(--solid);color:var(--tx);font-family:"IBM Plex Sans",sans-serif}
+input[type=file]{font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:9px 11px}
+input[type=file]::file-selector-button{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;margin-right:11px;cursor:pointer;
+  border:1px solid var(--bd-2);background:var(--glass-2);color:var(--tx);
+  padding:6px 11px;border-radius:8px;
+}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:99px;
+  background:linear-gradient(90deg,var(--or) 0%,rgba(255,122,24,.22) 100%);outline:none;padding:0;border:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:19px;height:19px;border-radius:99px;cursor:pointer;
+  background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.55),0 0 0 3px rgba(255,122,24,.38);
+}
+input[type=range]::-moz-range-thumb{
+  width:19px;height:19px;border:none;border-radius:99px;cursor:pointer;background:#fff;
+  box-shadow:0 3px 12px rgba(0,0,0,.55),0 0 0 3px rgba(255,122,24,.38);
+}
+
+/* ============================ topbar ============================ */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  background:rgba(16,17,42,.72);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);
+  border-bottom:1px solid var(--bd);
+}
+.topbar-in{
+  max-width:1420px;margin:0 auto;padding:11px 20px;
+  display:flex;align-items:center;gap:14px 22px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.mark{
+  width:32px;height:32px;border-radius:10px;flex:none;position:relative;
+  background:var(--or);
+  box-shadow:0 8px 20px -9px rgba(255,122,24,.85), inset 0 1px 0 rgba(255,255,255,.32);
+  display:grid;place-items:center;
+}
+.mark span{
+  font-family:Anton,sans-serif;font-size:16px;color:#150c02;line-height:1;margin-top:1px
+}
+.wordmark{font-family:Anton,sans-serif;font-size:21px;letter-spacing:.02em;text-transform:uppercase}
+.pill-studio{
+  font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  padding:4px 9px;border-radius:99px;background:var(--or);color:#150c02;font-weight:600;
+}
+.nav{display:flex;gap:4px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.nav button{
+  position:relative;background:none;border:none;cursor:pointer;color:var(--mut);
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.09em;text-transform:uppercase;
+  padding:9px 12px 11px;transition:.16s;border-radius:8px 8px 0 0;
+}
+.nav button:hover{color:var(--tx)}
+.nav button::after{
+  content:"";position:absolute;left:12px;right:12px;bottom:3px;height:2px;border-radius:99px;
+  background:var(--or);transform:scaleX(0);transform-origin:left;transition:transform .22s ease;
+}
+.nav button[aria-selected="true"]{color:var(--tx)}
+.nav button[aria-selected="true"]::after{transform:scaleX(1)}
+.status-pill{
+  margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex:none;
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.05em;color:var(--mut);
+  padding:7px 13px;border-radius:99px;border:1px solid var(--bd);background:var(--glass-2);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);max-width:100%;
+}
+.status-pill .dot{
+  width:6px;height:6px;border-radius:99px;background:var(--warn);flex:none;
+  box-shadow:0 0 0 3px rgba(255,182,72,.18);animation:pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ============================ pages ============================ */
+main{padding:30px 0 80px}
+.page{display:none;animation:fade .26s ease}
+.page.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+/* ---------- hero ---------- */
+.hero{
+  position:relative;overflow:hidden;padding:34px 34px 30px;margin-bottom:26px;
+  border-radius:var(--r-lg);
+}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:30px;align-items:center}
+.hero h1{margin:0 0 14px}
+.hero h1 .h-anton{font-size:clamp(32px,5vw,54px)}
+.hero h1 .h-script{font-size:clamp(40px,6.2vw,68px);margin-left:.13em}
+.hero p{color:var(--mut);max-width:56ch;margin:0 0 26px;font-size:15px}
+.orb-box{display:grid;place-items:center;position:relative;min-height:230px}
+.orb{
+  width:210px;height:210px;border-radius:50%;
+  background:radial-gradient(circle at 42% 38%, #ffd7b0 0%, #ff9c4d 24%, #ff7a18 48%, rgba(255,122,24,.28) 72%, transparent 78%);
+  filter:blur(30px);opacity:.62;animation:spin 26s linear infinite;
+}
+.orb-core{
+  position:absolute;width:118px;height:118px;border-radius:50%;
+  background:radial-gradient(circle at 36% 30%,rgba(255,236,214,.6),rgba(255,160,90,.1) 52%,transparent 70%);
+  border:1px solid rgba(255,255,255,.14);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  box-shadow:inset 0 0 40px rgba(255,190,138,.16);
+  animation:float 7s ease-in-out infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes float{0%,100%{transform:translateY(-7px)}50%{transform:translateY(7px)}}
+.feat-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.feat{
+  display:flex;gap:11px;align-items:flex-start;padding:13px 14px;border-radius:var(--r);
+  background:var(--glass);border:1px solid var(--bd);
+}
+.feat .ico{
+  width:32px;height:32px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:rgba(255,122,24,.16);border:1px solid rgba(255,122,24,.34);color:var(--or);
+}
+.feat .ico svg{width:17px;height:17px}
+.feat b{display:block;font-size:13px;font-weight:600;margin-bottom:1px}
+.feat small{color:var(--dim);font-size:11.5px;line-height:1.45;display:block}
+
+/* ---------- studio layout ---------- */
+.studio-grid{display:grid;grid-template-columns:minmax(0,1fr) 352px;gap:20px;align-items:start}
+.panel{padding:20px;border-radius:var(--r-lg)}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 16px;
+}
+.panel-title{font-family:Anton,sans-serif;text-transform:uppercase;font-size:16px;letter-spacing:.04em}
+
+/* segmented switchers */
+.seg{
+  display:inline-flex;padding:4px;gap:3px;border-radius:99px;border:1px solid var(--bd);
+  background:var(--glass);flex-wrap:wrap;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+.seg button{
+  border:none;background:none;cursor:pointer;color:var(--mut);border-radius:99px;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;
+  padding:8px 15px;transition:.16s;display:inline-flex;align-items:center;gap:7px;
+}
+.seg button:hover{color:var(--tx)}
+.seg button[aria-selected="true"]{background:var(--or);color:#150c02;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.28)}
+.seg button svg{width:14px;height:14px}
+.seg-sm button{padding:6px 12px;font-size:10.5px}
+
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+
+/* model select row */
+.model-row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;margin-bottom:16px;
+}
+.model-meta{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:9px}
+.model-note{font-size:11.5px;color:var(--dim);margin-top:8px;line-height:1.5}
+
+/* aspect icon select */
+.icon-select{position:relative}
+.icon-select-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 12px;border-radius:var(--r-sm);cursor:pointer;
+  border:1px solid var(--bd);background:var(--glass);color:var(--tx);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;transition:.16s;
+}
+.icon-select-btn:hover{border-color:var(--bd-2);background:var(--glass-2)}
+.icon-select-btn .left{display:flex;align-items:center;gap:10px;min-width:0}
+.ar{
+  flex:none;border:1.6px solid var(--or-2);border-radius:3px;background:rgba(255,122,24,.16);
+}
+.icon-select-pop{
+  position:absolute;z-index:40;top:calc(100% + 6px);left:0;right:0;padding:7px;
+  border-radius:var(--r);border:1px solid var(--bd-2);
+  background:var(--solid);
+  box-shadow:0 22px 50px -18px rgba(0,0,0,.9);
+  max-height:250px;overflow:auto;
+}
+.icon-select-pop button{
+  width:100%;display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:9px;
+  border:none;background:none;color:var(--mut);cursor:pointer;text-align:left;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;transition:.14s;
+}
+.icon-select-pop button:hover{background:var(--glass-3);color:var(--tx)}
+.icon-select-pop button[aria-selected="true"]{color:var(--tx);background:rgba(255,122,24,.16)}
+.icon-select-pop small{margin-left:auto;color:var(--dim);font-size:10.5px}
+
+/* prompt + mentions */
+.prompt-wrap{position:relative}
+.mention-pop{
+  position:absolute;z-index:45;left:12px;bottom:12px;width:min(300px,calc(100% - 24px));
+  border-radius:var(--r);border:1px solid var(--bd-2);background:var(--solid);
+  box-shadow:0 22px 50px -18px rgba(0,0,0,.9);padding:7px;max-height:210px;overflow:auto;
+}
+.mention-pop .mhead{
+  font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);padding:6px 9px 8px;
+}
+.mention-pop button{
+  width:100%;display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:9px;
+  border:none;background:none;color:var(--tx);cursor:pointer;text-align:left;font-size:13px;
+}
+.mention-pop button:hover{background:var(--glass-3)}
+.mention-pop img{width:26px;height:26px;border-radius:7px;object-fit:cover;flex:none}
+.mention-pop .ph{
+  width:26px;height:26px;border-radius:7px;flex:none;background:var(--or);
+  display:grid;place-items:center;color:#150c02;font-family:Anton,sans-serif;font-size:12px;
+}
+.mention-pop .kind{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim)}
+.mention-empty{padding:12px 10px;color:var(--dim);font-size:12.5px}
+
+.el-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px}
+.el-tag{
+  display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 5px;border-radius:99px;
+  border:1px solid var(--bd);background:var(--glass-2);font-size:12px;cursor:pointer;transition:.16s;
+}
+.el-tag:hover{border-color:var(--bd-2);background:var(--glass-3)}
+.el-tag img{width:21px;height:21px;border-radius:99px;object-fit:cover}
+.el-tag .ph{
+  width:21px;height:21px;border-radius:99px;background:var(--or);color:#150c02;
+  display:grid;place-items:center;font-family:Anton,sans-serif;font-size:10px;
+}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+.gen-bar{
+  display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  margin-top:18px;padding-top:16px;border-top:1px solid var(--bd);
+}
+.cost-hint{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--dim)}
+.cost-hint b{color:var(--tx);font-weight:600}
+
+/* ---------- media panel ---------- */
+.media-panel{padding:18px;border-radius:var(--r-lg);position:sticky;top:78px}
+.drop{
+  border:1.6px dashed rgba(255,255,255,.22);border-radius:var(--r);padding:22px 14px;text-align:center;
+  cursor:pointer;transition:.18s;background:rgba(255,255,255,.02);margin-bottom:14px;
+}
+.drop:hover,.drop.over{border-color:var(--or);background:rgba(255,122,24,.08)}
+.drop .ico{
+  width:38px;height:38px;border-radius:11px;margin:0 auto 10px;display:grid;place-items:center;
+  background:rgba(255,122,24,.13);border:1px solid rgba(255,122,24,.3);color:var(--or);
+}
+.drop .ico svg{width:19px;height:19px}
+.drop b{display:block;font-size:13px;margin-bottom:3px}
+.drop small{color:var(--dim);font-size:11px;font-family:"IBM Plex Mono",monospace}
+.media-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:420px;overflow:auto;padding-right:3px}
+.m-card{
+  position:relative;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--bd);
+  background:var(--glass);aspect-ratio:1;
+}
+.m-card img,.m-card video{width:100%;height:100%;object-fit:cover;display:block}
+.m-card .fallback{
+  width:100%;height:100%;display:grid;place-items:center;color:var(--dim);
+  background:linear-gradient(160deg,rgba(255,122,24,.16),rgba(255,122,24,.03));
+}
+.m-card .fallback svg{width:26px;height:26px}
+.m-card .tag{
+  position:absolute;top:6px;left:6px;font-family:"IBM Plex Mono",monospace;font-size:8.5px;
+  letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:99px;
+  background:rgba(10,11,28,.72);border:1px solid var(--bd);color:var(--mut);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.m-card .x{
+  position:absolute;top:5px;right:5px;width:21px;height:21px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--bd);background:rgba(10,11,28,.74);color:var(--mut);
+  display:grid;place-items:center;font-size:13px;line-height:1;opacity:0;transition:.16s;
+}
+.m-card:hover .x{opacity:1}
+.m-card .x:hover{color:#fff;border-color:var(--bd-2)}
+.empty{
+  text-align:center;color:var(--dim);font-size:12.5px;padding:30px 12px;grid-column:1/-1;
+  font-family:"IBM Plex Mono",monospace;
+}
+
+/* ---------- models page ---------- */
+.cat-group{margin-bottom:34px}
+.cat-head{display:flex;align-items:center;gap:13px;margin-bottom:15px;flex-wrap:wrap}
+.cat-head h3{font-family:Anton,sans-serif;text-transform:uppercase;font-size:19px;letter-spacing:.04em;margin:0}
+.cat-head .line{flex:1 1 60px;height:1px;background:linear-gradient(90deg,var(--bd),transparent);min-width:30px}
+.mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(304px,1fr));gap:14px}
+.mcard{padding:17px;border-radius:var(--r);transition:.2s}
+.mcard:hover{border-color:var(--bd-2);transform:translateY(-2px)}
+.mcard .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:4px}
+.mcard h4{margin:0;font-size:15.5px;font-weight:600;line-height:1.3}
+.mcard .prov{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--or);letter-spacing:.08em;text-transform:uppercase;margin-bottom:11px}
+.mcard .id{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--mut);background:rgba(0,0,0,.26);border:1px solid var(--bd);padding:4px 8px;border-radius:7px;display:inline-block;margin-bottom:12px;word-break:break-all}
+.klist{display:grid;gap:7px;margin-bottom:12px}
+.krow{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;align-items:baseline}
+.krow span{color:var(--dim);font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;flex:none}
+.krow b{font-weight:500;text-align:right;color:var(--tx)}
+.src{font-size:11px;color:var(--dim);border-top:1px solid var(--bd);padding-top:10px;line-height:1.5}
+.src a{color:var(--or-2);text-decoration:none;border-bottom:1px solid rgba(255,156,77,.32)}
+.src a:hover{color:var(--or-3);border-color:rgba(255,190,138,.6)}
+
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+.legend .item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--mut);padding:9px 13px;border-radius:var(--r-sm);border:1px solid var(--bd);background:var(--glass)}
+
+/* ---------- plans ---------- */
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:28px}
+.plan{padding:24px;border-radius:var(--r-lg);position:relative;display:flex;flex-direction:column;transition:.2s}
+.plan:hover{transform:translateY(-3px);border-color:var(--bd-2)}
+.plan.feature{border-color:rgba(255,122,24,.4);box-shadow:0 24px 64px -28px rgba(255,122,24,.45),var(--hair),var(--shadow)}
+.plan .ribbon{position:absolute;top:-10px;left:24px}
+.plan h3{font-family:Anton,sans-serif;text-transform:uppercase;font-size:23px;letter-spacing:.04em;margin:0 0 4px}
+.plan .tagline{color:var(--dim);font-size:12.5px;margin-bottom:18px;min-height:2.6em}
+.price{display:flex;align-items:baseline;gap:6px;margin-bottom:5px}
+.price .amt{font-family:Anton,sans-serif;font-size:40px;line-height:1;color:var(--or)}
+.price .per{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--dim)}
+.allow{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--or-3);margin-bottom:18px;
+  padding:9px 12px;border-radius:9px;background:rgba(255,122,24,.09);border:1px solid rgba(255,122,24,.24);
+}
+.plan ul{list-style:none;padding:0;margin:0 0 20px;display:grid;gap:10px;flex:1}
+.plan li{display:flex;gap:10px;font-size:13.5px;color:var(--mut);align-items:flex-start;line-height:1.5}
+.plan li svg{width:15px;height:15px;flex:none;color:var(--or);margin-top:2.5px}
+.plan li b{color:var(--tx);font-weight:600}
+
+.calc{padding:26px;border-radius:var(--r-lg);margin-bottom:24px}
+.calc-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:30px;align-items:start}
+.calc-out{padding:20px;border-radius:var(--r);background:rgba(0,0,0,.24);border:1px solid var(--bd)}
+.calc-big{font-family:Anton,sans-serif;font-size:42px;line-height:1;color:var(--or);margin-bottom:5px}
+.calc-rows{display:grid;gap:9px;margin-top:16px;padding-top:16px;border-top:1px solid var(--bd)}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:11px}
+.slider-val{font-family:"IBM Plex Mono",monospace;font-size:15px;color:var(--tx);font-weight:600}
+.ticks{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);margin-top:7px}
+
+.disclosure{
+  padding:22px 24px;border-radius:var(--r-lg);
+  border:1px solid rgba(255,182,72,.3);background:rgba(255,182,72,.07);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+.disclosure h4{margin:0 0 9px;font-size:14.5px;display:flex;align-items:center;gap:9px;font-weight:600}
+.disclosure h4 svg{width:17px;height:17px;color:var(--warn);flex:none}
+.disclosure p{margin:0 0 11px;color:var(--mut);font-size:13.5px;line-height:1.65;max-width:92ch}
+.disclosure p:last-child{margin-bottom:0}
+.disclosure b{color:var(--tx)}
+
+/* ---------- elements ---------- */
+.el-grid{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:20px;align-items:start}
+.el-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px}
+.el-card{border-radius:var(--r);overflow:hidden;border:1px solid var(--bd);background:var(--glass);transition:.18s;position:relative}
+.el-card:hover{transform:translateY(-3px);border-color:var(--bd-2)}
+.el-thumb{aspect-ratio:1;background:linear-gradient(160deg,rgba(255,122,24,.24),rgba(255,122,24,.04));display:grid;place-items:center;overflow:hidden}
+.el-thumb img,.el-thumb video{width:100%;height:100%;object-fit:cover}
+.el-thumb .ph{font-family:Anton,sans-serif;font-size:30px;color:rgba(255,255,255,.55)}
+.el-body{padding:11px 12px}
+.el-body b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px;word-break:break-word}
+.el-body small{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);letter-spacing:.09em;text-transform:uppercase}
+.el-card .rm{
+  position:absolute;top:7px;right:7px;width:24px;height:24px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--bd);background:rgba(10,11,28,.76);color:var(--mut);
+  display:grid;place-items:center;font-size:14px;line-height:1;opacity:0;transition:.16s;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+}
+.el-card:hover .rm{opacity:1}
+.el-card .rm:hover{color:#fff;border-color:var(--bad)}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,120%);z-index:90;
+  padding:12px 20px;border-radius:99px;border:1px solid var(--bd-2);
+  background:rgba(24,26,61,.94);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  font-family:"IBM Plex Mono",monospace;font-size:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.9);
+  transition:transform .3s cubic-bezier(.2,.9,.3,1.2);max-width:calc(100vw - 40px);text-align:center;
+}
+.toast.on{transform:translate(-50%,0)}
+
+
+/* ============================ premium polish ============================ */
+body{letter-spacing:-.006em}
+.glass,.panel,.mcard,.plan,.media-panel,.hero,.calc,.disclosure{
+  background-image:linear-gradient(168deg,rgba(255,255,255,.055) 0%,rgba(255,255,255,.012) 46%,rgba(255,255,255,0) 100%);
+}
+.hero{border:1px solid rgba(255,255,255,.085);padding:40px 40px 34px}
+.hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  box-shadow:inset 0 0 120px -40px rgba(255,122,24,.35);
+}
+.wordmark{letter-spacing:.005em}
+.topbar{border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+.page-head{margin-bottom:10px}
+.page-sub{font-size:15px;line-height:1.62;margin-bottom:32px}
+.panel,.media-panel{padding:24px}
+.mcard{padding:19px}
+.mcard:hover{border-color:rgba(255,122,24,.34);box-shadow:0 20px 48px -28px rgba(255,122,24,.45),var(--hair),var(--shadow)}
+.plan{padding:28px}
+.plan h3{letter-spacing:.05em}
+.price .amt{letter-spacing:-.01em}
+.feat{padding:15px 16px;background-image:linear-gradient(168deg,rgba(255,255,255,.05),rgba(255,255,255,0))}
+.feat:hover{border-color:rgba(255,122,24,.28)}
+.btn{letter-spacing:.055em}
+.lbl{letter-spacing:.16em;color:#7d84ab}
+.eyebrow{letter-spacing:.24em}
+.eyebrow::before{width:26px;opacity:.85}
+.krow b{font-variant-numeric:tabular-nums}
+.calc-rows .krow b,.slider-val,.calc-big,.price .amt{font-variant-numeric:tabular-nums}
+.drop{border-radius:var(--r);padding:26px 16px}
+.badge{letter-spacing:.13em}
+.src{padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
+.disclosure{border:1px solid rgba(255,182,72,.24);background-color:rgba(255,182,72,.05)}
+@media (max-width:760px){.hero{padding:26px 22px}.panel,.media-panel{padding:18px}.plan{padding:22px}}
+
+/* ============================ responsive ============================ */
+@media (max-width:1180px){
+  .studio-grid{grid-template-columns:1fr}
+  .media-panel{position:static}
+  .media-grid{max-height:none}
+  .calc-grid{grid-template-columns:1fr;gap:22px}
+}
+@media (max-width:960px){
+  .hero-grid{grid-template-columns:1fr}
+  .orb-box{order:-1;min-height:170px}
+  .orb{width:158px;height:158px}
+  .orb-core{width:88px;height:88px}
+  .plans{grid-template-columns:1fr}
+  .el-grid{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .feat-row{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .status-pill{margin-left:0;order:3;width:100%;justify-content:center}
+  .nav{order:4;width:100%}
+  .hero{padding:24px 20px}
+  .panel{padding:16px}
+}
+@media (max-width:520px){
+  .wrap{padding:0 14px}
+  .topbar-in{padding:10px 14px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .model-row{grid-template-columns:1fr}
+  .media-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ TOPBAR ============================ -->
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="mark"><span>G</span></div>
+      <div class="wordmark">Genroll</div>
+      <div class="pill-studio">Studio</div>
+    </div>
+    <nav class="nav" role="tablist" id="nav">
+      <button role="tab" data-page="studio" aria-selected="true">Studio</button>
+      <button role="tab" data-page="models" aria-selected="false">Models</button>
+      <button role="tab" data-page="plans" aria-selected="false">Plans</button>
+      <button role="tab" data-page="elements" aria-selected="false">Elements</button>
+    </nav>
+    <div class="status-pill" id="statusPill"><span class="dot"></span> Preview mode — generation &amp; payments disabled</div>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+<!-- ============================ STUDIO ============================ -->
+<section class="page on" id="page-studio">
+
+  <div class="hero glass">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">One console · every model</div>
+        <h1><span class="h-anton">Genroll</span> <span class="h-script">Studio</span></h1>
+        <p>Image, video and audio generation in a single composer. Pick any model on any plan, tag your saved Elements with <code class="mono" style="color:var(--or-2)">@</code>, and keep one predictable monthly bill.</p>
+        <div class="feat-row">
+          <div class="feat">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L3 21"/></svg></div>
+            <div><b>3 tool families</b><small>Image, video and audio under one prompt bar.</small></div>
+          </div>
+          <div class="feat">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><circle cx="12" cy="12" r="4"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg></div>
+            <div><b>No model gates</b><small>Every plan unlocks every listed model.</small></div>
+          </div>
+          <div class="feat">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+            <div><b>Sourced specs</b><small>Unconfirmed limits are badged, never guessed.</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="orb-box"><div class="orb"></div><div class="orb-core"></div></div>
+    </div>
+  </div>
+
+  <div class="studio-grid">
+    <!-- composer -->
+    <div class="panel glass">
+      <div class="panel-head">
+        <div class="seg" id="toolSeg" role="tablist">
+          <button role="tab" data-tool="image" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L3 21"/></svg>Image</button>
+          <button role="tab" data-tool="video" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>Video</button>
+          <button role="tab" data-tool="audio" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>Audio</button>
+        </div>
+        <div class="seg seg-sm" id="modeSeg">
+          <button data-mode="generate" aria-selected="true">Generate</button>
+          <button data-mode="edit" aria-selected="false">Edit</button>
+        </div>
+      </div>
+
+      <!-- audio sub-tabs -->
+      <div id="audioSubWrap" hidden style="margin-bottom:16px">
+        <div class="seg seg-sm" id="audioSub">
+          <button data-sub="speech" aria-selected="true">Speech</button>
+          <button data-sub="lipsync" aria-selected="false">Lipsync</button>
+          <button data-sub="voiceclone" aria-selected="false">Voice Clone</button>
+          <button data-sub="dub" aria-selected="false">Dub</button>
+        </div>
+      </div>
+
+      <!-- model picker -->
+      <div class="model-row">
+        <div>
+          <label class="lbl" for="modelSelect">Model</label>
+          <select id="modelSelect"></select>
+        </div>
+        <div style="padding-bottom:2px"><span id="modelBadge"></span></div>
+      </div>
+      <div class="model-meta" id="modelMeta"></div>
+      <div class="model-note" id="modelNote"></div>
+
+      <div style="height:18px"></div>
+
+      <!-- model-specific fields -->
+      <div id="fields"></div>
+
+      <!-- prompt -->
+      <div class="field prompt-wrap">
+        <label class="lbl" for="prompt" id="promptLabel">Prompt</label>
+        <textarea id="prompt" placeholder="Describe the shot — type @ to tag a saved Element…"></textarea>
+        <div class="mention-pop" id="mentionPop" hidden></div>
+      </div>
+
+      <div class="el-bar" id="elBar"></div>
+
+      <div class="chip-row">
+        <button class="chip" id="chipEnhance" aria-pressed="false">✦ Prompt enhance</button>
+        <button class="chip" id="chipNeg" aria-pressed="false">⊘ Negative prompt</button>
+        <button class="chip" id="chipSurprise">🎲 Surprise me</button>
+      </div>
+
+      <div class="field" id="negWrap" hidden style="margin-top:13px">
+        <label class="lbl" for="negPrompt">Negative prompt</label>
+        <input type="text" id="negPrompt" placeholder="blurry, watermark, extra fingers…">
+      </div>
+
+      <div class="gen-bar">
+        <div class="cost-hint" id="costHint"></div>
+        <button class="btn btn-primary btn-lg" id="genBtn">Generate →</button>
+      </div>
+    </div>
+
+    <!-- media panel -->
+    <aside class="media-panel glass">
+      <div class="panel-head" style="margin-bottom:13px">
+        <div class="panel-title">Media</div>
+        <div class="seg seg-sm" id="mediaTabs">
+          <button data-mtab="uploaded" aria-selected="true">Uploaded</button>
+          <button data-mtab="generations" aria-selected="false">Generations</button>
+        </div>
+      </div>
+
+      <div class="drop" id="drop">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"/></svg></div>
+        <b>Drop files or click to upload</b>
+        <small>PNG · JPG · WEBP · MP4 · MOV · MP3 · WAV</small>
+        <input type="file" id="fileIn" multiple accept="image/*,video/*,audio/*" hidden>
+      </div>
+
+      <div class="chip-row" style="margin:0 0 13px">
+        <button class="chip" data-filter="all" aria-pressed="true">All</button>
+        <button class="chip" data-filter="image" aria-pressed="false">Image</button>
+        <button class="chip" data-filter="video" aria-pressed="false">Video</button>
+        <button class="chip" data-filter="audio" aria-pressed="false">Audio</button>
+      </div>
+
+      <div class="media-grid" id="mediaGrid"></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================ MODELS ============================ -->
+<section class="page" id="page-models">
+  <div class="page-head"><span class="h-anton">Every</span> <span class="h-script">Model</span></div>
+  <p class="page-sub">The full catalogue, grouped by tool. Every figure below carries the source it came from. Where a spec could not be confirmed against vendor documentation it is badged rather than guessed — Genroll never invents a capability.</p>
+
+  <div class="legend">
+    <div class="item"><span class="badge badge-verified"><span class="dot"></span>Verified</span> Confirmed on the vendor's own docs.</div>
+    <div class="item"><span class="badge badge-partial"><span class="dot"></span>Partial</span> Some fields sourced, others not published.</div>
+    <div class="item"><span class="badge badge-unverified"><span class="dot"></span>Unverified</span> Third-party or disputed — treat as indicative.</div>
+  </div>
+
+  <div id="catalog"></div>
+</section>
+
+<!-- ============================ PLANS ============================ -->
+<section class="page" id="page-plans">
+  <div class="page-head"><span class="h-anton">Only</span> <span class="h-script">Unlimited</span></div>
+  <p class="page-sub">Every plan unlocks every tool and every model on the Models page. Nothing is gated behind a tier. Plans differ by one thing only: the size of the shared monthly ₹ allowance that covers metered generation cost.</p>
+
+  <div class="plans" id="plans"></div>
+
+  <div class="calc glass">
+    <div class="panel-head"><div class="panel-title">Build your own plan</div><span class="badge badge-grad">Custom</span></div>
+    <div class="calc-grid">
+      <div>
+        <div class="slider-head">
+          <label class="lbl" style="margin:0" for="allowSlider">Monthly allowance pool</label>
+          <div class="slider-val" id="allowVal">₹2,500</div>
+        </div>
+        <input type="range" id="allowSlider" min="500" max="50000" step="500" value="2500">
+        <div class="ticks"><span>₹500</span><span>₹25,000</span><span>₹50,000</span></div>
+
+        <div style="height:22px"></div>
+        <label class="lbl" for="calcModel">Estimate output volume against</label>
+        <select id="calcModel"></select>
+        <p class="model-note" id="calcNote" style="margin-top:11px"></p>
+      </div>
+      <div class="calc-out">
+        <span class="lbl">You pay monthly</span>
+        <div class="calc-big" id="calcPrice">₹2,950</div>
+        <div class="cost-hint">Allowance <b id="calcAllow">₹2,500</b> + platform fee</div>
+        <div class="calc-rows" id="calcRows"></div>
+        <div style="height:16px"></div>
+        <button class="btn btn-primary btn-block is-off" id="calcCta" disabled>Payments disabled in preview</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclosure">
+    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>How "unlimited" works here — in plain terms</h4>
+    <p><b>Unlimited refers to access, not usage.</b> Every plan can open every tool and select every model listed in the catalogue. There is no Pro-only model, no locked resolution and no feature paywall between tiers.</p>
+    <p>What the plan price buys is a <b>shared monthly allowance pool</b>, quoted in rupees. Each generation draws down that pool at the underlying provider's metered rate — a $0.022/sec video model and a $0.247/sec video model consume the same pool at very different speeds. When the pool is spent, generation pauses until you top up or the next cycle begins. <b>This is not true unlimited usage, and we will not describe it as such.</b></p>
+    <p>Rates shown throughout Genroll are the provider's published list rates at the time of sourcing, converted for display. They can move without notice when a provider repricing lands, and per-request rounding rules differ by vendor. Treat every volume estimate on this page as an estimate. Unused allowance does not carry over.</p>
+  </div>
+</section>
+
+<!-- ============================ ELEMENTS ============================ -->
+<section class="page" id="page-elements">
+  <div class="page-head"><span class="h-anton">Your</span> <span class="h-script">Elements</span></div>
+  <p class="page-sub">Named, reusable image and video references — a character, a style plate, a product shot. Save one here and it appears in the Studio composer's Elements bar and in <code class="mono" style="color:var(--or-2)">@</code>-mention autocomplete inside the prompt.</p>
+
+  <div class="el-grid">
+    <div class="panel glass">
+      <div class="panel-title" style="margin-bottom:16px">Save a new element</div>
+      <form id="elForm">
+        <div class="field">
+          <label class="lbl" for="elName">Element name</label>
+          <input type="text" id="elName" placeholder="e.g. Maya — lead character" required maxlength="42">
+        </div>
+        <div class="field">
+          <label class="lbl" for="elKind">Type</label>
+          <select id="elKind">
+            <option value="character">Character</option>
+            <option value="style">Style</option>
+            <option value="object">Object</option>
+            <option value="location">Location</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="lbl" for="elFile">Reference file</label>
+          <input type="file" id="elFile" accept="image/*,video/*">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">＋ Save element</button>
+      </form>
+      <p class="model-note">Elements stay in this browser tab only — preview mode keeps nothing on a server.</p>
+    </div>
+
+    <div class="panel glass">
+      <div class="panel-head">
+        <div class="panel-title">Library</div>
+        <span class="badge" id="elCount"><span class="dot"></span>0 saved</span>
+      </div>
+      <div class="el-cards" id="elCards"></div>
+    </div>
+  </div>
+</section>
+
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   SOURCE-OF-TRUTH MODEL DATA
+   status: verified | partial | unverified
+   Nothing here is invented. Unconfirmed fields read "Not published".
+   ============================================================ */
+const NP = "Not published";
+
+const SRC = {
+  bfl:  {label:"Black Forest Labs / comparison brief, Sep 2026", url:"https://www.pixmind.io/posts/gpt-image-2-vs-seedream-flux-2-comparison"},
+  oai:  {label:"OpenAI image API guide via comparison brief, Sep 2026", url:"https://www.pixmind.io/posts/gpt-image-2-vs-seedream-flux-2-comparison"},
+  seed: {label:"Seedream public route contract via comparison brief, Sep 2026", url:"https://www.pixmind.io/posts/gpt-image-2-vs-seedream-flux-2-comparison"},
+  atlas:{label:"Atlas Cloud video model comparison, 2026 (aggregator)", url:"https://www.atlascloud.ai/blog/tips/best-ai-video-generation-models-2026"},
+  rank: {label:"Blind-vote image model ranking round-up, Apr 2026", url:"https://www.ai.joaoqueiros.com/blog/ai-image-model-comparison-2026"},
+  el:   {label:"ElevenLabs model cheat sheet, 2026", url:"https://www.webfuse.com/elevenlabs-cheat-sheet"},
+  sync: {label:"sync. labs lipsync model docs", url:"https://sync.so/docs/models/lipsync"}
+};
+
+const AR = [
+  {v:"1:1",   w:20,h:20, note:"Square"},
+  {v:"4:5",   w:17,h:21, note:"Portrait"},
+  {v:"3:4",   w:16,h:21, note:"Portrait"},
+  {v:"9:16",  w:12,h:21, note:"Vertical"},
+  {v:"4:3",   w:22,h:16, note:"Landscape"},
+  {v:"3:2",   w:23,h:15, note:"Photo"},
+  {v:"16:9",  w:25,h:14, note:"Widescreen"},
+  {v:"21:9",  w:27,h:11, note:"Cinema"},
+  {v:"auto",  w:20,h:20, note:"Model picks"}
+];
+
+const MODELS = {
+  image: [
+    { id:"gpt-image-2", name:"GPT Image 2", prov:"OpenAI", status:"partial", src:SRC.oai,
+      versions:["gpt-image-2","gpt-image-2-2026-04-21"],
+      qualities:["low","medium","high"], resolutions:["Auto","1024px","1536px","2048px"],
+      aspects:["1:1","3:2","2:3","16:9","9:16","auto"], formats:["png","jpeg","webp"], maxOutputs:4,
+      limits:{"Output sizes":"Flexible — size, quality, format and compression are per-request","Reference inputs":"High-fidelity image inputs supported","Billing":"Token-based: text-in, image-in, cached-in, image-out"},
+      note:"Exact size and rate-limit ceilings vary by endpoint; OpenAI publishes them per-endpoint rather than as one table." },
+
+    { id:"seedream-5.0-pro", name:"Seedream 5.0 Pro", prov:"ByteDance", status:"partial", src:SRC.seed,
+      versions:["seedream-5.0-pro"],
+      qualities:["standard"], resolutions:["1K","1.5K","2K"],
+      aspects:["1:1","4:5","3:4","9:16","4:3","3:2","16:9","21:9","auto"], formats:["png","jpeg"], maxOutputs:1,
+      limits:{"Resolution":"1K, 1.5K and 2K","Aspect ratios":"9 choices including auto","Reference images":"Up to 10 URLs","Outputs":"1 image per request","Not exposed":"No seed, negative prompt or prompt-enhance parameter"},
+      note:"Negative prompt and seed are unavailable on the verified public route — the composer hides them for this model." },
+
+    { id:"flux-2-pro", name:"FLUX.2 [pro]", prov:"Black Forest Labs", status:"partial", src:SRC.bfl,
+      versions:["flux-2-pro","flux-2-pro-preview"],
+      qualities:["standard","high"], resolutions:["1 MP","2 MP","4 MP"],
+      aspects:["1:1","4:5","3:4","9:16","4:3","3:2","16:9","21:9"], formats:["png","jpeg","webp"], maxOutputs:4,
+      limits:{"Max output":"Up to 4 megapixels","Reference images":"Up to 8 via API","Billing":"Per model and per megapixel processed, with vendor rounding rules"},
+      note:"Pixel budget is billed by megapixels processed — large references raise cost even at a small output size." },
+
+    { id:"flux-2-max", name:"FLUX.2 [max]", prov:"Black Forest Labs", status:"unverified", src:SRC.rank,
+      versions:["flux-2-max"], qualities:["max"], resolutions:["Not published"],
+      aspects:["1:1","4:5","16:9","9:16","3:2"], formats:["png","jpeg"], maxOutputs:2,
+      limits:{"Tier":"Top price/performance tier of the FLUX.2 family","Specs":NP},
+      note:"Listed in a third-party family round-up; per-tier limits were not published there." },
+
+    { id:"flux-2-dev-turbo", name:"FLUX.2 [dev] Turbo", prov:"Black Forest Labs", status:"unverified", src:SRC.rank,
+      versions:["flux-2-dev-turbo"], qualities:["fast"], resolutions:["Not published"],
+      aspects:["1:1","4:5","16:9","9:16"], formats:["png","jpeg"], maxOutputs:4,
+      limits:{"Tier":"Speed-oriented open-weight tier","Specs":NP},
+      note:"Speed tier from the same family round-up — no vendor spec table confirmed." },
+
+    { id:"nano-banana-pro", name:"Nano Banana Pro", prov:"Google (Gemini)", status:"unverified", src:SRC.rank,
+      versions:["nano-banana-pro"], qualities:["high"], resolutions:["Not published"],
+      aspects:["1:1","4:5","3:4","9:16","4:3","16:9"], formats:["png","jpeg"], maxOutputs:4,
+      limits:{"Positioning":"Higher-fidelity Gemini image tier","Resolution ceiling":NP},
+      note:"Ranking round-up describes positioning only; no resolution or aspect table was published there." },
+
+    { id:"nano-banana-2", name:"Nano Banana 2", prov:"Google (Gemini)", status:"unverified", src:SRC.rank,
+      versions:["nano-banana-2","nano-banana-2-lite"], qualities:["standard"], resolutions:["Not published"],
+      aspects:["1:1","4:5","9:16","16:9"], formats:["png","jpeg"], maxOutputs:4,
+      limits:{"Positioning":"General-purpose Gemini image work; a Lite variant exists","Resolution ceiling":NP},
+      note:"Variant naming confirmed in the round-up; capability ceilings were not." },
+
+    { id:"imagen-4-ultra", name:"Imagen 4 Ultra", prov:"Google", status:"unverified", src:SRC.rank,
+      versions:["imagen-4-ultra"], qualities:["ultra"], resolutions:["Not published"],
+      aspects:["1:1","4:3","3:4","16:9","9:16"], formats:["png","jpeg"], maxOutputs:4,
+      limits:{"Specs":NP},
+      note:"Named in the round-up but not analysed; no limits sourced." },
+
+    { id:"ideogram-4.0-quality", name:"Ideogram 4.0 (Quality)", prov:"Ideogram", status:"partial", src:SRC.rank,
+      versions:["ideogram-4.0-quality"], qualities:["quality"], resolutions:["Not published"],
+      aspects:["1:1","4:5","3:4","9:16","4:3","3:2","16:9"], formats:["png","jpeg"], maxOutputs:4,
+      limits:{"Strength":"Text rendering specialist","Resolution ceiling":NP},
+      note:"Best-in-class for legible in-image typography per the round-up; numeric limits not published there." },
+
+    { id:"recraft-v4.1-utility", name:"Recraft V4.1 Utility", prov:"Recraft", status:"partial", src:SRC.rank,
+      versions:["recraft-v4.1-utility"], qualities:["standard"], resolutions:["Not published"],
+      aspects:["1:1","4:5","3:4","16:9","auto"], formats:["png","jpeg","svg"], maxOutputs:4,
+      limits:{"Unique capability":"The only family with true SVG export","Resolution ceiling":NP},
+      note:"Vector output is the differentiator — choose SVG format for true editable vectors." },
+
+    { id:"reve-2.1", name:"Reve 2.1", prov:"Reve", status:"unverified", src:SRC.rank,
+      versions:["reve-2.1"], qualities:["standard"], resolutions:["Not published"],
+      aspects:["1:1","4:5","16:9","9:16","3:2"], formats:["png","jpeg"], maxOutputs:4,
+      limits:{"Positioning":"Top quality at pipeline cost, per ranking round-up","Specs":NP},
+      note:"High placement in blind-vote ranking; no vendor spec sheet confirmed." },
+
+    { id:"midjourney-v7-alpha", name:"Midjourney v7 Alpha", prov:"Midjourney", status:"unverified", src:SRC.rank,
+      versions:["midjourney-v7-alpha"], qualities:["standard"], resolutions:["Not published"],
+      aspects:["1:1","4:5","3:4","9:16","16:9","21:9"], formats:["png"], maxOutputs:4,
+      limits:{"API":"No public API — not programmatically routable","Specs":NP},
+      note:"Retained in the catalogue for reference only. Without a public API this model cannot be routed from Genroll." }
+  ],
+
+  video: [
+    { id:"sora-2", name:"Sora 2", prov:"OpenAI", status:"unverified", src:SRC.atlas,
+      versions:["sora-2"], durations:["4s","8s","10s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.15,
+      limits:{"Max duration":"10 seconds","Resolution":"1080p","Native audio":"Disputed — aggregator table says no; vendor messaging says yes","Rate":"$0.15 / second"},
+      note:"Audio behaviour is the one field we could not reconcile between sources, so this model is badged unverified rather than shown as settled." },
+
+    { id:"veo-3.1", name:"Veo 3.1", prov:"Google DeepMind", status:"partial", src:SRC.atlas,
+      versions:["veo-3.1"], durations:["4s","6s","8s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16"], formats:["mp4"], maxOutputs:2, rate:0.098,
+      limits:{"Max duration":"8 seconds","Resolution":"Listed as \"cinematic\" — no pixel figure given","Native audio":"Yes","Rate":"$0.098 / second"},
+      note:"The source table lists resolution qualitatively rather than as a pixel ceiling." },
+
+    { id:"kling-3.0", name:"Kling 3.0", prov:"Kuaishou", status:"partial", src:SRC.atlas,
+      versions:["kling-3.0"], durations:["5s","10s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.126,
+      limits:{"Max duration":"10 seconds","Resolution":"1080p","Native audio":"Yes","Rate":"$0.126 / second"} },
+
+    { id:"kling-video-o3", name:"Kling Video O3", prov:"Kuaishou", status:"partial", src:SRC.atlas,
+      versions:["kling-video-o3"], durations:["5s","10s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.15,
+      limits:{"Max duration":"10 seconds","Resolution":"1080p","Native audio":"Yes","Rate":"$0.15 / second"} },
+
+    { id:"vidu-q3", name:"Vidu Q3", prov:"Shengshu", status:"partial", src:SRC.atlas,
+      versions:["vidu-q3"], durations:["4s","8s","12s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.07,
+      limits:{"Max duration":"12 seconds — longest in the compared set","Resolution":"1080p","Native audio":"Yes","Rate":"$0.07 / second"} },
+
+    { id:"seedance-2.0-pro", name:"Seedance 2.0 Pro", prov:"ByteDance", status:"partial", src:SRC.atlas,
+      versions:["seedance-2.0-pro"], durations:["4s","8s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.247,
+      limits:{"Max duration":"8 seconds","Resolution":"1080p","Native audio":"No","Rate":"$0.247 / second — highest in the compared set"} },
+
+    { id:"seedance-2.0-fast", name:"Seedance 2.0 Fast", prov:"ByteDance", status:"partial", src:SRC.atlas,
+      versions:["seedance-2.0-fast"], durations:["4s","8s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:4, rate:0.022,
+      limits:{"Max duration":"8 seconds","Resolution":"1080p","Native audio":"No","Rate":"$0.022 / second — cheapest in the compared set"} },
+
+    { id:"hailuo-2.3", name:"Hailuo 2.3", prov:"MiniMax", status:"partial", src:SRC.atlas,
+      versions:["hailuo-2.3"], durations:["6s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.08,
+      limits:{"Max duration":"6 seconds","Resolution":"1080p","Native audio":"Yes","Rate":"$0.08 / second"} },
+
+    { id:"luma-ray-3", name:"Luma Ray 3", prov:"Luma AI", status:"partial", src:SRC.atlas,
+      versions:["luma-ray-3"], durations:["5s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.10,
+      limits:{"Max duration":"5 seconds","Resolution":"1080p","Native audio":"No","Rate":"$0.10 / second"} },
+
+    { id:"pixverse-v4.5", name:"PixVerse V4.5", prov:"PixVerse", status:"partial", src:SRC.atlas,
+      versions:["pixverse-v4.5"], durations:["4s","8s"], resolutions:["720p","1080p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:2, rate:0.09,
+      limits:{"Max duration":"8 seconds","Resolution":"1080p","Native audio":"No","Rate":"$0.09 / second"} },
+
+    { id:"wan-2.6", name:"Wan 2.6", prov:"Alibaba", status:"partial", src:SRC.atlas,
+      versions:["wan-2.6"], durations:["5s"], resolutions:["480p","720p"],
+      aspects:["16:9","9:16","1:1"], formats:["mp4"], maxOutputs:4, rate:0.07,
+      limits:{"Max duration":"5 seconds","Resolution":"720p","Native audio":"No","Rate":"$0.07 / second"} }
+  ],
+
+  speech: [
+    { id:"eleven-v3", name:"Eleven v3", prov:"ElevenLabs", status:"verified", src:SRC.el,
+      versions:["eleven_v3"], langs:"70+", chars:5000, latency:"~1–2 s",
+      formats:["mp3","wav","pcm"], maxOutputs:1,
+      limits:{"Languages":"70+","Character limit":"5,000 per request","Latency":"~1–2 seconds","Best for":"Emotional dialogue and character voices"} },
+
+    { id:"eleven-multilingual-v2", name:"Multilingual v2", prov:"ElevenLabs", status:"verified", src:SRC.el,
+      versions:["eleven_multilingual_v2"], langs:"29", chars:10000, latency:"~1–2 s",
+      formats:["mp3","wav","pcm"], maxOutputs:1,
+      limits:{"Languages":"29","Character limit":"10,000 per request","Latency":"~1–2 seconds","Best for":"Audiobooks, podcasts, premium narration"} },
+
+    { id:"eleven-flash-v2.5", name:"Flash v2.5", prov:"ElevenLabs", status:"verified", src:SRC.el,
+      versions:["eleven_flash_v2_5"], langs:"32", chars:40000, latency:"75 ms",
+      formats:["mp3","wav","pcm"], maxOutputs:1,
+      limits:{"Languages":"32","Character limit":"40,000 per request — highest in the family","Latency":"75 ms","Best for":"Real-time apps, chatbots, voice agents"} },
+
+    { id:"scribe-v2", name:"Scribe v2 (speech-to-text)", prov:"ElevenLabs", status:"verified", src:SRC.el,
+      versions:["scribe_v2"], langs:"90+", chars:0, latency:"~150 ms",
+      formats:["json","srt","vtt"], maxOutputs:1,
+      limits:{"Languages":"90+","Input":"Audio, not text — transcription rather than synthesis","Latency":"~150 ms"},
+      note:"Transcription model. Included here because Speech workflows usually pair it with a TTS pass." }
+  ],
+
+  lipsync: [
+    { id:"sync-3", name:"sync-3", prov:"sync. labs", status:"verified", src:SRC.sync,
+      versions:["sync-3"], fps:["24","25","30"], quals:["4K native"], formats:["mp4"], maxOutputs:1, rate:0.12,
+      limits:{"Face resolution":"4K native output with built-in super resolution","Strengths":"Obstruction detection, extreme angles","Rate":"$0.107 – $0.133 / second at 25 fps","Max input duration":"Plan-dependent: 1 min (Hobbyist) to 30 min (Scale+)"} },
+
+    { id:"lipsync-2-pro", name:"lipsync-2-pro", prov:"sync. labs", status:"verified", src:SRC.sync,
+      versions:["lipsync-2-pro"], fps:["24","25","30"], quals:["512×512 + diffusion SR"], formats:["mp4"], maxOutputs:1, rate:0.075,
+      limits:{"Face resolution":"512×512 with diffusion-based super resolution","Rate":"$0.067 – $0.083 / second at 25 fps","Max input duration":"Plan-dependent: 1 min to 30 min"} },
+
+    { id:"lipsync-2", name:"lipsync-2", prov:"sync. labs", status:"verified", src:SRC.sync,
+      versions:["lipsync-2"], fps:["24","25","30"], quals:["512×512"], formats:["mp4"], maxOutputs:1, rate:0.045,
+      limits:{"Face resolution":"512×512","Strengths":"Preserves the speaker's own style","Rate":"$0.04 – $0.05 / second at 25 fps","Max input duration":"Plan-dependent: 1 min to 30 min"} },
+
+    { id:"lipsync-1.9.0-beta", name:"lipsync-1.9.0-beta (legacy)", prov:"sync. labs", status:"verified", src:SRC.sync,
+      versions:["lipsync-1.9.0-beta"], fps:["25"], quals:["generic"], formats:["mp4"], maxOutputs:1, rate:0.0225,
+      limits:{"Status":"Legacy — fast, generic lip movement","Rate":"$0.02 – $0.025 / second at 25 fps","Max input duration":"Plan-dependent: 1 min to 30 min"} },
+
+    { id:"hedra-character-3", name:"Hedra Character-3", prov:"Hedra", status:"unverified", src:SRC.sync,
+      versions:["character-3"], fps:["24","30"], quals:["Not published"], formats:["mp4"], maxOutputs:1, rate:0,
+      limits:{"Specs":NP},
+      note:"Appears across lipsync round-ups but no vendor spec table was confirmed during sourcing." }
+  ],
+
+  voiceclone: [
+    { id:"elevenlabs-ivc", name:"Instant Voice Cloning (IVC)", prov:"ElevenLabs", status:"verified", src:SRC.el,
+      versions:["ivc"], sample:"1–2 minutes of audio", turnaround:"Instant",
+      formats:["mp3","wav"], maxOutputs:1,
+      limits:{"Sample required":"1–2 minutes of audio","Turnaround":"Instant","Intended for":"Quick prototyping and internal testing"} },
+
+    { id:"elevenlabs-pvc", name:"Professional Voice Cloning (PVC)", prov:"ElevenLabs", status:"verified", src:SRC.el,
+      versions:["pvc"], sample:"3+ hours of audio", turnaround:"Training queue",
+      formats:["mp3","wav"], maxOutputs:1,
+      limits:{"Sample required":"3+ hours of audio","Quality":"Studio-grade","Extra":"Can be shared in the ElevenLabs Voice Library"} }
+  ],
+
+  dub: [
+    { id:"elevenlabs-dubbing", name:"ElevenLabs Dubbing", prov:"ElevenLabs", status:"partial", src:SRC.el,
+      versions:["dubbing"], targets:["Spanish","French","German","Hindi","Japanese","Portuguese","Arabic","Mandarin"],
+      formats:["mp4","mp3","wav"], maxOutputs:1,
+      limits:{"Capability":"Dubbing, voice isolation and related audio cleanup","Per-language ceilings":NP,"Max source length":NP},
+      note:"Capability is confirmed on the vendor round-up; per-language and duration ceilings were not published there, so they are not shown as fact." }
+  ]
+};
+
+const AUDIO_FAMILIES = {speech:"Speech", lipsync:"Lipsync", voiceclone:"Voice Clone", dub:"Dub"};
+const USD_INR = 88; // display conversion only
+
+/* ============================================================ state */
+const state = {
+  page:"studio", tool:"image", mode:"generate", sub:"speech",
+  picked:{image:"gpt-image-2", video:"sora-2", speech:"eleven-v3", lipsync:"sync-3", voiceclone:"elevenlabs-ivc", dub:"elevenlabs-dubbing"},
+  vals:{},
+  elements:[], media:[], mediaTab:"uploaded", mediaFilter:"all",
+  neg:false, enhance:false
+};
+
+const $  = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const inr = n => "₹" + (n < 100 ? (Math.round(n*100)/100).toLocaleString("en-IN",{maximumFractionDigits:2}) : Math.round(n).toLocaleString("en-IN"));
+
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove("on"), 2600);
+}
+function family(){ return state.tool === "audio" ? state.sub : state.tool; }
+function list(){ return MODELS[family()] || []; }
+function current(){ const f = family(); return list().find(m => m.id === state.picked[f]) || list()[0]; }
+
+/* ============================================================ nav */
+$$("#nav button").forEach(b => b.addEventListener("click", ()=>{
+  state.page = b.dataset.page;
+  $$("#nav button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  $$(".page").forEach(p => p.classList.toggle("on", p.id === "page-" + state.page));
+  window.scrollTo({top:0, behavior:"smooth"});
+}));
+
+/* ============================================================ tool / mode / sub */
+$$("#toolSeg button").forEach(b => b.addEventListener("click", ()=>{
+  state.tool = b.dataset.tool;
+  $$("#toolSeg button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  $("#audioSubWrap").hidden = state.tool !== "audio";
+  state.vals = {};
+  renderComposer();
+}));
+$$("#modeSeg button").forEach(b => b.addEventListener("click", ()=>{
+  state.mode = b.dataset.mode;
+  $$("#modeSeg button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  renderComposer();
+}));
+$$("#audioSub button").forEach(b => b.addEventListener("click", ()=>{
+  state.sub = b.dataset.sub;
+  $$("#audioSub button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  state.vals = {};
+  renderComposer();
+}));
+
+/* ============================================================ composer */
+function badgeFor(st){
+  const label = st === "verified" ? "Verified" : st === "partial" ? "Partial" : "Unverified";
+  return `<span class="badge badge-${st}"><span class="dot"></span>${label}</span>`;
+}
+
+function renderComposer(){
+  const fam = family(), models = list();
+  if (!models.length) return;
+  if (!models.find(m => m.id === state.picked[fam])) state.picked[fam] = models[0].id;
+  const m = current();
+
+  // model dropdown
+  $("#modelSelect").innerHTML = models.map(x =>
+    `<option value="${esc(x.id)}"${x.id === m.id ? " selected" : ""}>${esc(x.name)} — ${esc(x.prov)}</option>`
+  ).join("");
+
+  $("#modelBadge").innerHTML = badgeFor(m.status);
+
+  // meta chips
+  const meta = [];
+  if (m.versions) meta.push(`<span class="badge"><span class="dot"></span>${m.versions.length} version${m.versions.length>1?"s":""}</span>`);
+  if (m.rate) meta.push(`<span class="badge"><span class="dot"></span>${inr(m.rate*USD_INR)}/sec est.</span>`);
+  if (m.chars) meta.push(`<span class="badge"><span class="dot"></span>${m.chars.toLocaleString("en-IN")} chars</span>`);
+  if (m.langs) meta.push(`<span class="badge"><span class="dot"></span>${m.langs} languages</span>`);
+  $("#modelMeta").innerHTML = meta.join("");
+  $("#modelNote").innerHTML = m.note
+    ? esc(m.note)
+    : `Limits and rates for this model live on the <b style="color:var(--or-2)">Models</b> page, with the source they came from.`;
+
+  $("#fields").innerHTML = fieldsHTML(m, fam);
+  wireFields();
+
+  // prompt label + placeholder per family
+  const P = {
+    image:["Prompt","Describe the shot — type @ to tag a saved Element…"],
+    video:["Prompt","Describe the motion, camera and subject — type @ to tag an Element…"],
+    speech:["Script","Paste the script to speak…"],
+    lipsync:["Script or audio note","What the face should say, or a note about the audio track you uploaded…"],
+    voiceclone:["Consent note","Confirm you have the speaker's consent, and describe the voice…"],
+    dub:["Notes for the dub","Tone, formality, names that must not be translated…"]
+  }[fam] || ["Prompt","Describe what you want…"];
+  $("#promptLabel").textContent = P[0];
+  $("#prompt").placeholder = P[1];
+
+  // chips availability — Seedream exposes no negative prompt on the verified route
+  const noNeg = m.id === "seedream-5.0-pro" || ["speech","voiceclone","dub"].includes(fam);
+  $("#chipNeg").hidden = noNeg;
+  if (noNeg){ state.neg = false; $("#negWrap").hidden = true; $("#chipNeg").setAttribute("aria-pressed","false"); }
+  $("#chipEnhance").hidden = m.id === "seedream-5.0-pro";
+  $("#chipSurprise").hidden = ["voiceclone","dub"].includes(fam);
+
+  $("#genBtn").textContent = state.mode === "edit" ? "Apply edit →" : "Generate →";
+  renderCost();
+  renderElBar();
+}
+
+function selField(id,label,opts,val){
+  return `<div class="field"><label class="lbl" for="f-${id}">${esc(label)}</label>
+    <select id="f-${id}" data-f="${id}">${opts.map(o =>
+      `<option value="${esc(o)}"${o === val ? " selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`;
+}
+function numField(id,label,max,val){
+  return `<div class="field"><label class="lbl" for="f-${id}">${esc(label)}</label>
+    <input type="number" id="f-${id}" data-f="${id}" min="1" max="${max}" value="${val}"></div>`;
+}
+function aspectField(m){
+  const opts = (m.aspects || ["1:1","16:9","9:16"]);
+  const val = state.vals.aspect && opts.includes(state.vals.aspect) ? state.vals.aspect : opts[0];
+  state.vals.aspect = val;
+  const d = AR.find(a => a.v === val) || AR[0];
+  return `<div class="field"><label class="lbl">Aspect ratio</label>
+    <div class="icon-select" id="arSel">
+      <button type="button" class="icon-select-btn" id="arBtn" aria-expanded="false">
+        <span class="left"><span class="ar" style="width:${d.w}px;height:${d.h}px"></span> ${esc(val)}</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="icon-select-pop" id="arPop" hidden>
+        ${opts.map(v => {
+          const a = AR.find(x => x.v === v) || {w:20,h:20,note:""};
+          return `<button type="button" data-ar="${esc(v)}" aria-selected="${v===val}">
+            <span class="ar" style="width:${a.w}px;height:${a.h}px"></span>${esc(v)}<small>${esc(a.note)}</small></button>`;
+        }).join("")}
+      </div>
+    </div></div>`;
+}
+
+function fieldsHTML(m, fam){
+  const v = state.vals;
+  let h = "";
+  const ver = selField("version","Version", m.versions, v.version);
+
+  if (fam === "image"){
+    h += `<div class="grid-2">${ver}${selField("quality","Quality", m.qualities, v.quality)}</div>`;
+    h += `<div class="grid-3">${aspectField(m)}${selField("resolution","Resolution", m.resolutions, v.resolution)}${selField("format","Format", m.formats, v.format)}</div>`;
+    h += numField("outputs","Outputs (max " + m.maxOutputs + ")", m.maxOutputs, Math.min(v.outputs || 1, m.maxOutputs));
+  }
+  else if (fam === "video"){
+    h += `<div class="grid-2">${ver}${selField("duration","Duration", m.durations, v.duration)}</div>`;
+    h += `<div class="grid-3">${aspectField(m)}${selField("resolution","Resolution", m.resolutions, v.resolution)}${selField("format","Format", m.formats, v.format)}</div>`;
+    h += numField("outputs","Outputs (max " + m.maxOutputs + ")", m.maxOutputs, Math.min(v.outputs || 1, m.maxOutputs));
+  }
+  else if (fam === "speech"){
+    h += `<div class="grid-2">${ver}${selField("voice","Voice", ["Aria","Kabir","Meera","Rowan","Sable","Cloned voice"], v.voice)}</div>`;
+    h += `<div class="grid-3">${selField("language","Language", ["Auto-detect","English","Hindi","Tamil","Spanish","French","German","Japanese"], v.language)}${selField("format","Format", m.formats, v.format)}${selField("speed","Speed", ["0.8×","0.9×","1.0×","1.1×","1.25×"], v.speed || "1.0×")}</div>`;
+  }
+  else if (fam === "lipsync"){
+    h += `<div class="grid-2">${ver}${selField("fps","Frame rate", m.fps, v.fps)}</div>`;
+    h += `<div class="grid-2">${selField("quality","Face quality", m.quals, v.quality)}${selField("format","Format", m.formats, v.format)}</div>`;
+  }
+  else if (fam === "voiceclone"){
+    h += `<div class="grid-2">${ver}${selField("format","Output format", m.formats, v.format)}</div>`;
+    h += `<div class="field"><label class="lbl">Sample requirement</label>
+      <div class="glass" style="padding:11px 13px;border-radius:11px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--or-2)">${esc(m.sample)} · ${esc(m.turnaround)}</div></div>`;
+  }
+  else if (fam === "dub"){
+    h += `<div class="grid-2">${ver}${selField("target","Target language", m.targets, v.target)}</div>`;
+    h += `<div class="grid-2">${selField("speakers","Speakers", ["1","2","3","4+","Auto-detect"], v.speakers || "Auto-detect")}${selField("format","Format", m.formats, v.format)}</div>`;
+  }
+  return h;
+}
+
+function wireFields(){
+  $$("#fields [data-f]").forEach(el => el.addEventListener("change", ()=>{
+    state.vals[el.dataset.f] = el.value; renderCost();
+  }));
+  const btn = $("#arBtn"), pop = $("#arPop");
+  if (btn){
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const open = pop.hidden;
+      pop.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+    });
+    $$("#arPop button").forEach(b => b.addEventListener("click", ()=>{
+      state.vals.aspect = b.dataset.ar; pop.hidden = true;
+      $("#fields").innerHTML = fieldsHTML(current(), family()); wireFields(); renderCost();
+    }));
+  }
+}
+document.addEventListener("click", ()=>{ const p = $("#arPop"); if (p) p.hidden = true; });
+
+$("#modelSelect").addEventListener("change", e => {
+  state.picked[family()] = e.target.value;
+  state.vals = {};
+  renderComposer();
+});
+
+function renderCost(){
+  const m = current(), fam = family(), v = state.vals;
+  let txt;
+  if (fam === "video" && m.rate){
+    const secs = parseFloat(v.duration || (m.durations && m.durations[0]) || "5");
+    const n = Math.max(1, parseInt(v.outputs || 1, 10));
+    txt = `Est. draw <b>${inr(m.rate * USD_INR * secs * n)}</b> · ${secs}s × ${n} at ${inr(m.rate*USD_INR)}/sec`;
+  } else if (fam === "lipsync" && m.rate){
+    txt = `Est. draw <b>${inr(m.rate * USD_INR * 30)}</b> for a 30-second clip`;
+  } else if (fam === "image"){
+    txt = `Metered per megapixel or per output token — <b>varies by request</b>`;
+  } else if (fam === "speech"){
+    txt = `Metered per character · limit <b>${m.chars ? m.chars.toLocaleString("en-IN") : "—"}</b> per request`;
+  } else {
+    txt = `Metered against your monthly allowance pool`;
+  }
+  $("#costHint").innerHTML = txt;
+}
+
+/* ============================================================ chips */
+$("#chipEnhance").addEventListener("click", function(){
+  state.enhance = !state.enhance; this.setAttribute("aria-pressed", String(state.enhance));
+  toast(state.enhance ? "Prompt enhance on — the model rewrites your prompt first" : "Prompt enhance off");
+});
+$("#chipNeg").addEventListener("click", function(){
+  state.neg = !state.neg; this.setAttribute("aria-pressed", String(state.neg));
+  $("#negWrap").hidden = !state.neg;
+});
+const SURPRISE = {
+  image:["a brass diving helmet resting on wet basalt, low tide, overcast north-sea light",
+         "an abandoned rooftop greenhouse at dusk, condensation on glass, sodium streetlight bleed",
+         "hand-painted Bombay film poster of a rickshaw chase, cracked litho texture",
+         "still life of three mangoes on a steel thali, single window light, deep shadow"],
+  video:["slow dolly through monsoon rain along a Kerala backwater, oil lamps on the bank",
+         "macro of ink dropping into milk, 120fps, black backdrop, single key light",
+         "handheld follow of a kite runner across Ahmedabad rooftops at golden hour"],
+  speech:["Welcome back. Your render finished nine minutes ago — want to see it?",
+          "This quarter we shipped four models, two of them ours."],
+  lipsync:["Say it slowly, and look just past the camera.",
+           "The whole thing was rebuilt in a weekend."]
+};
+$("#chipSurprise").addEventListener("click", ()=>{
+  const pool = SURPRISE[family()] || SURPRISE.image;
+  $("#prompt").value = pool[Math.floor(Math.random() * pool.length)];
+  toast("Surprise prompt dropped in");
+});
+$("#genBtn").addEventListener("click", ()=>{
+  toast("Preview mode — generation is disabled on this build");
+});
+
+/* ============================================================ @-mentions */
+const ta = $("#prompt"), pop = $("#mentionPop");
+ta.addEventListener("input", ()=>{
+  const cur = ta.value.slice(0, ta.selectionStart);
+  const mt = cur.match(/@([\w-]*)$/);
+  if (!mt){ pop.hidden = true; return; }
+  const q = mt[1].toLowerCase();
+  const hits = state.elements.filter(e => e.name.toLowerCase().includes(q));
+  pop.innerHTML = `<div class="mhead">Elements${q ? " matching “" + esc(q) + "”" : ""}</div>` + (
+    state.elements.length === 0
+      ? `<div class="mention-empty">No elements saved yet — add one on the <b style="color:var(--or-2)">Elements</b> tab.</div>`
+      : hits.length === 0
+        ? `<div class="mention-empty">No element matches that.</div>`
+        : hits.map(e => `<button type="button" data-el="${esc(e.id)}">
+            ${e.url ? `<img src="${esc(e.url)}" alt="">` : `<span class="ph">${esc(e.name[0].toUpperCase())}</span>`}
+            ${esc(e.name)}<span class="kind">${esc(e.kind)}</span></button>`).join("")
+  );
+  pop.hidden = false;
+  $$("#mentionPop button").forEach(b => b.addEventListener("click", ()=> insertMention(b.dataset.el)));
+});
+ta.addEventListener("blur", ()=> setTimeout(()=>{ pop.hidden = true; }, 180));
+ta.addEventListener("keydown", e => { if (e.key === "Escape") pop.hidden = true; });
+
+function insertMention(id){
+  const el = state.elements.find(x => x.id === id); if (!el) return;
+  const pos = ta.selectionStart;
+  const before = ta.value.slice(0, pos).replace(/@([\w-]*)$/, "");
+  ta.value = before + "@" + el.name.replace(/\s+/g, "-") + " " + ta.value.slice(pos);
+  pop.hidden = true; ta.focus();
+  const np = (before + "@" + el.name.replace(/\s+/g, "-") + " ").length;
+  ta.setSelectionRange(np, np);
+}
+function renderElBar(){
+  const bar = $("#elBar");
+  if (!state.elements.length){
+    bar.innerHTML = `<span class="cost-hint">No Elements yet — save one on the <b style="color:var(--or-2)">Elements</b> tab to tag it here with @.</span>`;
+    return;
+  }
+  bar.innerHTML = `<span class="lbl" style="margin:0 4px 0 0">Tag</span>` + state.elements.map(e =>
+    `<button class="el-tag" data-el="${esc(e.id)}">${
+      e.url ? `<img src="${esc(e.url)}" alt="">` : `<span class="ph">${esc(e.name[0].toUpperCase())}</span>`
+    }${esc(e.name)}</button>`).join("");
+  $$("#elBar .el-tag").forEach(b => b.addEventListener("click", ()=>{
+    ta.focus();
+    const el = state.elements.find(x => x.id === b.dataset.el);
+    ta.value = (ta.value.trim() + " @" + el.name.replace(/\s+/g, "-") + " ").replace(/^\s+/, "");
+    toast("Tagged @" + el.name);
+  }));
+}
+
+/* ============================================================ media panel */
+const drop = $("#drop"), fileIn = $("#fileIn");
+drop.addEventListener("click", ()=> fileIn.click());
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", ()=> drop.classList.remove("over"));
+drop.addEventListener("drop", e => {
+  e.preventDefault(); drop.classList.remove("over");
+  addFiles(e.dataTransfer.files);
+});
+fileIn.addEventListener("change", e => addFiles(e.target.files));
+
+function kindOf(f){
+  if (f.type.startsWith("image")) return "image";
+  if (f.type.startsWith("video")) return "video";
+  if (f.type.startsWith("audio")) return "audio";
+  return "image";
+}
+function addFiles(files){
+  const arr = Array.from(files || []); if (!arr.length) return;
+  arr.forEach(f => state.media.push({
+    id:"m" + Date.now() + Math.random().toString(36).slice(2,7),
+    name:f.name, kind:kindOf(f), url:URL.createObjectURL(f), bucket:"uploaded"
+  }));
+  state.mediaTab = "uploaded";
+  $$("#mediaTabs button").forEach(x => x.setAttribute("aria-selected", String(x.dataset.mtab === "uploaded")));
+  renderMedia();
+  toast(arr.length + (arr.length > 1 ? " files added" : " file added"));
+}
+$$("#mediaTabs button").forEach(b => b.addEventListener("click", ()=>{
+  state.mediaTab = b.dataset.mtab;
+  $$("#mediaTabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  renderMedia();
+}));
+$$(".media-panel [data-filter]").forEach(b => b.addEventListener("click", ()=>{
+  state.mediaFilter = b.dataset.filter;
+  $$(".media-panel [data-filter]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  renderMedia();
+}));
+
+const ICON = {
+  image:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.35-4.35a2 2 0 0 0-2.83 0L3 21"/></svg>`,
+  video:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>`,
+  audio:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`
+};
+function renderMedia(){
+  const items = state.media.filter(m =>
+    m.bucket === state.mediaTab && (state.mediaFilter === "all" || m.kind === state.mediaFilter));
+  const grid = $("#mediaGrid");
+  if (!items.length){
+    grid.innerHTML = `<div class="empty">${
+      state.mediaTab === "uploaded" ? "Nothing uploaded yet" : "No generations — preview mode"
+    }</div>`;
+    return;
+  }
+  grid.innerHTML = items.map(m => `<div class="m-card">
+    ${ m.kind === "image" ? `<img src="${esc(m.url)}" alt="${esc(m.name)}">`
+      : m.kind === "video" ? `<video src="${esc(m.url)}" muted playsinline></video>`
+      : `<div class="fallback">${ICON.audio}</div>` }
+    <span class="tag">${esc(m.kind)}</span>
+    <button class="x" data-rm="${esc(m.id)}" title="Remove">×</button>
+  </div>`).join("");
+  $$("#mediaGrid [data-rm]").forEach(b => b.addEventListener("click", ()=>{
+    state.media = state.media.filter(x => x.id !== b.dataset.rm); renderMedia();
+  }));
+}
+
+/* ============================================================ elements page */
+$("#elForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("#elName").value.trim(); if (!name) return;
+  const f = $("#elFile").files[0];
+  state.elements.push({
+    id:"e" + Date.now() + Math.random().toString(36).slice(2,7),
+    name, kind:$("#elKind").value,
+    url:f ? URL.createObjectURL(f) : "",
+    vkind:f ? kindOf(f) : "image"
+  });
+  e.target.reset();
+  renderElements(); renderElBar();
+  toast("Saved “" + name + "” — tag it with @ in the composer");
+});
+function renderElements(){
+  const box = $("#elCards");
+  $("#elCount").innerHTML = `<span class="dot"></span>${state.elements.length} saved`;
+  if (!state.elements.length){
+    box.innerHTML = `<div class="empty">No elements yet — save your first one on the left</div>`;
+    return;
+  }
+  box.innerHTML = state.elements.map(e => `<div class="el-card">
+    <div class="el-thumb">${
+      e.url ? (e.vkind === "video"
+        ? `<video src="${esc(e.url)}" muted playsinline></video>`
+        : `<img src="${esc(e.url)}" alt="${esc(e.name)}">`)
+      : `<span class="ph">${esc(e.name[0].toUpperCase())}</span>` }</div>
+    <div class="el-body"><b>${esc(e.name)}</b><small>${esc(e.kind)}</small></div>
+    <button class="rm" data-rm="${esc(e.id)}" title="Remove">×</button>
+  </div>`).join("");
+  $$("#elCards [data-rm]").forEach(b => b.addEventListener("click", ()=>{
+    state.elements = state.elements.filter(x => x.id !== b.dataset.rm);
+    renderElements(); renderElBar();
+  }));
+}
+
+/* ============================================================ models page */
+function catalogHTML(){
+  const groups = [
+    {key:"image", title:"Image"},
+    {key:"video", title:"Video"},
+    {key:"speech", title:"Audio — Speech"},
+    {key:"lipsync", title:"Audio — Lipsync"},
+    {key:"voiceclone", title:"Audio — Voice Clone"},
+    {key:"dub", title:"Audio — Dub"}
+  ];
+  return groups.map(g => `<div class="cat-group">
+    <div class="cat-head">
+      <h3>${esc(g.title)}</h3><span class="badge"><span class="dot"></span>${MODELS[g.key].length} models</span><span class="line"></span>
+    </div>
+    <div class="mcards">${MODELS[g.key].map(m => `<article class="mcard glass">
+      <div class="top"><h4>${esc(m.name)}</h4>${badgeFor(m.status)}</div>
+      <div class="prov">${esc(m.prov)}</div>
+      <div class="id">${esc(m.versions[0])}</div>
+      <div class="klist">${Object.entries(m.limits).map(([k,v]) =>
+        `<div class="krow"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("")}</div>
+      ${m.note ? `<p style="font-size:12.5px;color:var(--mut);margin:0 0 12px;line-height:1.55">${esc(m.note)}</p>` : ""}
+      <div class="src">Source: <a href="${esc(m.src.url)}" target="_blank" rel="noopener">${esc(m.src.label)}</a></div>
+    </article>`).join("")}</div>
+  </div>`).join("");
+}
+
+/* ============================================================ plans */
+const PLANS = [
+  {tier:"spark", name:"Spark", tagline:"For solo creators testing ideas across models.", price:999, allow:750, feature:false},
+  {tier:"studio", name:"Studio", tagline:"For working freelancers and small teams shipping weekly.", price:2999, allow:2600, feature:true},
+  {tier:"scale", name:"Scale", tagline:"For agencies running client volume every day.", price:9999, allow:9200, feature:false}
+];
+const TICK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+
+function plansHTML(){
+  const nModels = Object.values(MODELS).reduce((a,b) => a + b.length, 0);
+  return PLANS.map(p => `<div class="plan glass${p.feature ? " feature" : ""}">
+    ${p.feature ? `<div class="ribbon"><span class="badge badge-grad">Most chosen</span></div>` : ""}
+    <h3>${esc(p.name)}</h3>
+    <div class="tagline">${esc(p.tagline)}</div>
+    <div class="price"><span class="amt">${inr(p.price)}</span><span class="per">/ month</span></div>
+    <div class="allow">${inr(p.allow)} monthly allowance pool</div>
+    <ul>
+      <li>${TICK}<span><b>Unlimited tools &amp; models</b> — all ${nModels} listed models, image, video and audio</span></li>
+      <li>${TICK}<span>No resolution, duration or feature gates between tiers</span></li>
+      <li>${TICK}<span>Unlimited saved <b>Elements</b> and @-mention tagging</span></li>
+      <li>${TICK}<span>Generation metered against the <b>${inr(p.allow)}</b> pool</span></li>
+      <li>${TICK}<span>Top up mid-cycle at the same metered rates</span></li>
+    </ul>
+    <button class="btn ${p.feature ? "btn-primary" : ""} btn-block is-off" data-tier="${esc(p.tier)}" disabled>Payments disabled in preview</button>
+  </div>`).join("");
+}
+
+/* calculator */
+const RATED = [...MODELS.video.filter(m => m.rate), ...MODELS.lipsync.filter(m => m.rate)];
+function initCalc(){
+  $("#calcModel").innerHTML = RATED.map(m =>
+    `<option value="${esc(m.id)}"${m.id === "veo-3.1" ? " selected" : ""}>${esc(m.name)} — ${inr(m.rate*USD_INR)}/sec</option>`).join("");
+  $("#allowSlider").addEventListener("input", renderCalc);
+  $("#calcModel").addEventListener("change", renderCalc);
+  renderCalc();
+}
+function renderCalc(){
+  const allow = parseInt($("#allowSlider").value, 10);
+  const fee = Math.max(180, Math.round(allow * 0.18));
+  const total = allow + fee;
+  const m = RATED.find(x => x.id === $("#calcModel").value) || RATED[0];
+  const perSec = m.rate * USD_INR;
+  const clip = parseFloat((m.durations && m.durations[0]) || "5");
+  const clips = Math.floor(allow / (perSec * clip));
+  const secs = Math.floor(allow / perSec);
+
+  $("#allowVal").textContent = inr(allow);
+  $("#calcAllow").textContent = inr(allow);
+  $("#calcPrice").textContent = inr(total);
+  $("#calcRows").innerHTML = `
+    <div class="krow"><span>Allowance pool</span><b>${inr(allow)}</b></div>
+    <div class="krow"><span>Platform fee</span><b>${inr(fee)}</b></div>
+    <div class="krow"><span>Rate used</span><b>${inr(perSec)} / sec</b></div>
+    <div class="krow"><span>Approx. seconds</span><b>${secs.toLocaleString("en-IN")} s</b></div>
+    <div class="krow"><span>Approx. ${clip}s clips</span><b>${clips.toLocaleString("en-IN")}</b></div>`;
+  $("#calcNote").innerHTML = `Estimated against <b style="color:var(--tx)">${esc(m.name)}</b> at its published list rate (${esc(m.limits["Rate"] || "see Models page")}), converted at a display rate of ₹${USD_INR}/USD. Every model remains available on every plan — this only estimates how fast one model would draw the pool down.`;
+}
+
+/* ============================================================ payments
+   Razorpay Subscriptions. The browser never sees a secret: /api/config
+   returns only the publishable key, and only once the server has both keys
+   plus at least one plan id. Until then everything stays in preview mode.
+   ============================================================ */
+const PAY = { enabled:false, keyId:null, plans:{}, mode:"unconfigured", missing:[] };
+
+async function loadPayConfig(){
+  try{
+    const r = await fetch("/api/config", { cache:"no-store" });
+    if (r.ok) Object.assign(PAY, await r.json());
+  }catch(_){ /* offline or not deployed yet — stay in preview mode */ }
+  renderPayState();
+}
+
+function renderPayState(){
+  const pill = $("#statusPill");
+  if (pill){
+    if (PAY.enabled && PAY.mode === "live"){
+      pill.innerHTML = '<span class="dot" style="background:var(--or);box-shadow:0 0 0 3px rgba(255,122,24,.2)"></span> Payments live · generation still in preview';
+    } else if (PAY.enabled){
+      pill.innerHTML = '<span class="dot"></span> Test mode — cards are simulated, no money moves';
+    }
+  }
+
+  $$("[data-tier]").forEach(b => {
+    const ready = PAY.enabled && PAY.plans[b.dataset.tier];
+    b.disabled = !ready;
+    b.classList.toggle("is-off", !ready);
+    b.textContent = ready ? "Subscribe →" : "Payments disabled in preview";
+  });
+
+  const cta = $("#calcCta");
+  if (cta && PAY.enabled){
+    cta.textContent = "Custom plans — talk to us";
+    cta.classList.remove("is-off");
+    cta.disabled = false;
+  }
+}
+
+async function subscribe(tier, btn){
+  if (!PAY.enabled || !PAY.plans[tier]) return;
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Opening checkout…";
+  try{
+    const r = await fetch("/api/create-subscription", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ tier })
+    });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) throw new Error(d.message || "Could not start the subscription.");
+    if (typeof Razorpay === "undefined") throw new Error("Checkout script did not load — check your connection.");
+
+    const rz = new Razorpay({
+      key: d.keyId,
+      subscription_id: d.subscriptionId,
+      name: "Genroll Studio",
+      description: tier.charAt(0).toUpperCase() + tier.slice(1) + " plan — monthly allowance",
+      theme: { color: "#ff7a18" },
+      modal: { ondismiss: ()=> toast("Checkout closed — nothing was charged") },
+      handler: async (resp)=>{
+        toast("Confirming with our server…");
+        try{
+          const v = await fetch("/api/verify", {
+            method:"POST", headers:{ "Content-Type":"application/json" },
+            body: JSON.stringify(resp)
+          }).then(x=>x.json());
+          toast(v && v.valid
+            ? "Subscription active — welcome aboard"
+            : "Payment taken but verification failed. Email support before retrying.");
+        }catch(_){
+          toast("Payment taken. We could not confirm it here — check your email.");
+        }
+      }
+    });
+    rz.on("payment.failed", e => {
+      const m = e && e.error && e.error.description;
+      toast("Payment failed" + (m ? ": " + m : " — try another method"));
+    });
+    rz.open();
+  }catch(e){
+    toast(e.message || "Something went wrong starting checkout.");
+  }finally{
+    btn.textContent = label;
+    renderPayState();
+  }
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-tier]");
+  if (b && !b.disabled) subscribe(b.dataset.tier, b);
+});
+
+/* ============================================================ boot */
+$("#catalog").innerHTML = catalogHTML();
+$("#plans").innerHTML = plansHTML();
+initCalc();
+renderComposer();
+renderMedia();
+renderElements();
+loadPayConfig();
+</script>
+</body>
+</html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Genroll Studio</title>
+<meta name="description" content="Genroll Studio — one creative console for image, video and audio models.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================ tokens ============================ */
