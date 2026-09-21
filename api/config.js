@@ -34,7 +34,7 @@ module.exports = (req, res) => {
 
   // Generation is a separate switch from payments — either can go live first.
   const genReady = Boolean(
-    (process.env.HIGGSFIELD_CREDENTIALS && process.env.HIGGSFIELD_CREDENTIALS.includes(':')) ||
+        process.env.HIGGSFIELD_CREDENTIALS ||
     (process.env.HIGGSFIELD_KEY_ID && process.env.HIGGSFIELD_KEY_SECRET)
   );
 
