@@ -1,8 +1,9 @@
 // POST /api/webhook  — Razorpay server-to-server events.
 //
-// This is what actually keeps billing state correct. The Checkout callback can
-// be lost (user closes the tab, phone dies); webhooks cannot. Renewals every
-// month arrive ONLY here — there is no browser involved in a renewal.
+// This is what actually keeps the credit ledger correct. The Checkout callback
+// can be lost (user closes the tab, phone dies, network drops) — the webhook
+// cannot. Treat the webhook as the source of truth and /api/verify as the fast
+// path that makes the UI feel instant.
 //
 // Verification: HMAC-SHA256 of the RAW request body, signed with the webhook
 // secret you set in the Razorpay dashboard, compared against the
@@ -67,45 +68,44 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'bad_json' });
   }
 
-  const type = event.event || 'unknown';
-  const sub  = event.payload && event.payload.subscription && event.payload.subscription.entity;
-  const pay  = event.payload && event.payload.payment && event.payload.payment.entity;
+  const type  = event.event || 'unknown';
+  const pay   = event.payload && event.payload.payment && event.payload.payment.entity;
+  const order = event.payload && event.payload.order && event.payload.order.entity;
+
+  // 1 credit = Rs.1. Always derive this from Razorpay's amount, never from
+  // anything the browser sent.
+  const credits = pay ? Math.floor(Number(pay.amount || 0) / 100) : 0;
 
   // Everything below is logging only. Wire these branches to your database
   // when you add one — the comments say exactly what each event should do.
   switch (type) {
-    case 'subscription.activated':
-      // Mandate approved and first charge succeeded -> switch the account on
-      // and credit the first month's allowance.
-      console.log('subscription.activated', sub && sub.id, sub && sub.notes);
+    case 'payment.captured':
+      // Money is settled. THIS is where credits get added, keyed on pay.id so
+      // a retried webhook cannot credit the same payment twice.
+      console.log('payment.captured', pay && pay.id, pay && pay.order_id, credits, pay && pay.notes);
       break;
 
-    case 'subscription.charged':
-      // A renewal succeeded. Fires every billing cycle. Reset the monthly
-      // allowance pool here — this is the event that matters most.
-      console.log('subscription.charged', sub && sub.id, pay && pay.amount);
+    case 'payment.authorized':
+      // Authorised but not yet captured. With auto-capture on (the default for
+      // Checkout) this is followed by payment.captured — do not credit here.
+      console.log('payment.authorized', pay && pay.id, pay && pay.order_id);
       break;
 
-    case 'subscription.pending':
-      // A debit failed; Razorpay will retry. Warn the customer, keep access.
-      console.log('subscription.pending', sub && sub.id);
+    case 'payment.failed':
+      // Nothing was charged. Log it so failures are visible; credit nothing.
+      console.log('payment.failed', pay && pay.id, pay && pay.error_description);
       break;
 
-    case 'subscription.halted':
-      // Retries exhausted. Suspend generation until they pay.
-      console.log('subscription.halted', sub && sub.id);
+    case 'order.paid':
+      // The order is fully paid. Redundant with payment.captured — kept for
+      // reconciliation only. Do not credit here as well, or you double-count.
+      console.log('order.paid', order && order.id, order && order.amount_paid);
       break;
 
-    case 'subscription.cancelled':
-    case 'subscription.completed':
-      // Access ends at current_end.
-      console.log(type, sub && sub.id);
-      break;
-
-    case 'subscription.paused':
-    case 'subscription.resumed':
-    case 'subscription.updated':
-      console.log(type, sub && sub.id);
+    case 'refund.created':
+    case 'refund.processed':
+      // Deduct the refunded credits from the balance.
+      console.log(type, event.payload && event.payload.refund && event.payload.refund.entity);
       break;
 
     default:
