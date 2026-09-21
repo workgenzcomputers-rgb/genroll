@@ -30,7 +30,7 @@ const ALLOWED_PATHS = new Set([
 function credentials() {
   // Accept either a single "id:secret" pair or two separate vars.
   const combined = process.env.HIGGSFIELD_CREDENTIALS;
-  if (combined && combined.includes(':')) return combined;
+  if (combined) return combined;
   const id = process.env.HIGGSFIELD_KEY_ID;
   const secret = process.env.HIGGSFIELD_KEY_SECRET;
   if (id && secret) return `${id}:${secret}`;
