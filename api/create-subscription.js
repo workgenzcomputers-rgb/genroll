@@ -1,4 +1,4 @@
-// POST /api/create-subscription   { tier: "spark" | "studio" | "scale", email?, name?, contact? }
+// POST /api/create-subscription   { tier: "starter" | "creator" | "studio", email?, name?, contact? }
 // -> { subscriptionId, keyId, shortUrl }
 //
 // Calls Razorpay's REST API directly with fetch — no npm dependency, so this
@@ -8,9 +8,9 @@
 //       auth = HTTP Basic (key_id : key_secret)
 
 const PLAN_ENV = {
-  spark:  'RZP_PLAN_SPARK',
-  studio: 'RZP_PLAN_STUDIO',
-  scale:  'RZP_PLAN_SCALE'
+  starter: 'RZP_PLAN_STARTER',
+  creator: 'RZP_PLAN_CREATOR',
+  studio:  'RZP_PLAN_STUDIO'
 };
 
 // How many billing cycles the mandate covers. Razorpay requires total_count on
@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
   if (!PLAN_ENV[tier]) {
     return res.status(400).json({
       error: 'unknown_tier',
-      message: 'tier must be one of: spark, studio, scale'
+      message: 'tier must be one of: starter, creator, studio'
     });
   }
 
@@ -106,4 +106,3 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'server_error' });
   }
 };
-
