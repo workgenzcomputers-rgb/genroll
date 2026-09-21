@@ -1,15 +1,14 @@
 // POST /api/verify
-//   { razorpay_payment_id, razorpay_subscription_id, razorpay_signature }
-// -> { valid: true, subscription: {...} }
+//   { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+// -> { valid: true, payment: {...} }
 //
 // Confirms the Checkout callback really came from Razorpay.
 //
-// For SUBSCRIPTIONS the signature is HMAC-SHA256 over
-//     razorpay_payment_id + "|" + subscription_id
+// For ORDERS the signature is HMAC-SHA256 over
+//     razorpay_order_id + "|" + razorpay_payment_id
 // signed with your key_secret.
-// (Note the order: this is the reverse of the one-time Orders flow, which is
-//  order_id + "|" + payment_id. Getting them the wrong way round is the single
-//  most common integration bug.)
+// (Subscriptions use the reverse order — payment_id + "|" + subscription_id.
+//  Getting them the wrong way round is the single most common integration bug.)
 
 const crypto = require('crypto');
 
@@ -39,62 +38,73 @@ module.exports = async (req, res) => {
   }
   body = body || {};
 
-  const paymentId    = body.razorpay_payment_id;
-  const subscription = body.razorpay_subscription_id;
-  const signature    = body.razorpay_signature;
+  const orderId   = body.razorpay_order_id;
+  const paymentId = body.razorpay_payment_id;
+  const signature = body.razorpay_signature;
 
-  if (!paymentId || !subscription || !signature) {
+  if (!orderId || !paymentId || !signature) {
     return res.status(400).json({
       error: 'missing_fields',
-      message: 'razorpay_payment_id, razorpay_subscription_id and razorpay_signature are all required.'
+      message: 'razorpay_order_id, razorpay_payment_id and razorpay_signature are all required.'
     });
   }
 
   const expected = crypto
     .createHmac('sha256', secret)
-    .update(`${paymentId}|${subscription}`)
+    .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
   if (!safeEqual(expected, signature)) {
-    console.warn('signature_mismatch', { subscription, paymentId });
+    console.warn('signature_mismatch', { orderId, paymentId });
     return res.status(400).json({ valid: false, error: 'invalid_signature' });
   }
 
-  // Signature is good. Re-read the subscription from Razorpay so we trust the
-  // server's view of its state, not anything the browser told us.
+  // Signature is good. Re-read the payment from Razorpay so the amount we
+  // credit comes from Razorpay's own record, never from the browser.
   try {
     const auth = 'Basic ' + Buffer.from(`${keyId}:${secret}`).toString('base64');
-    const r = await fetch(`https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(subscription)}`, {
+    const r = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
       headers: { Authorization: auth }
     });
     const data = await r.json().catch(() => ({}));
 
     if (!r.ok) {
-      console.error('subscription_fetch_failed', r.status, data);
+      console.error('payment_fetch_failed', r.status, data);
       // The signature was valid, so report success but flag the lookup.
-      return res.status(200).json({ valid: true, subscription: null, lookupFailed: true });
+      return res.status(200).json({ valid: true, payment: null, lookupFailed: true });
     }
+
+    // Guard against a signature replayed against a different order.
+    if (data.order_id && data.order_id !== orderId) {
+      console.warn('order_mismatch', { orderId, actual: data.order_id });
+      return res.status(400).json({ valid: false, error: 'order_mismatch' });
+    }
+
+    const credits = Math.floor(Number(data.amount || 0) / 100); // 1 credit = Rs.1
 
     // ---------------------------------------------------------------------
     // TODO (needs a database — see the go-live notes):
-    // Persist { subscription.id, subscription.status, notes.tier, notes.customer_email }
-    // and grant the plan's monthly allowance. Until then this endpoint only
-    // proves the payment is authentic; it does not remember anything.
+    // Persist { payment.id, order_id, amount, notes.customer_email } and add
+    // `credits` to that customer's balance, keyed on payment.id so a repeated
+    // call cannot credit twice. Until then this endpoint only proves the
+    // payment is authentic; it does not remember anything.
     // ---------------------------------------------------------------------
 
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       valid: true,
-      subscription: {
+      payment: {
         id: data.id,
-        status: data.status,
-        planId: data.plan_id,
-        currentEnd: data.current_end || null,
-        tier: (data.notes && data.notes.tier) || null
+        orderId: data.order_id,
+        status: data.status,        // 'captured' once the money is settled
+        amount: data.amount,        // paise
+        credits,
+        method: data.method || null,
+        email: (data.notes && data.notes.customer_email) || data.email || null
       }
     });
   } catch (err) {
     console.error('verify_exception', err);
-    return res.status(200).json({ valid: true, subscription: null, lookupFailed: true });
+    return res.status(200).json({ valid: true, payment: null, lookupFailed: true });
   }
 };
