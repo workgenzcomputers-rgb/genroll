@@ -4,12 +4,9 @@
 //
 // While the env vars are unset this returns { enabled: false } and the site
 // stays in preview mode — nothing breaks before the Razorpay account is ready.
-
-const PLAN_ENV = {
-  starter: 'RZP_PLAN_STARTER',
-  creator: 'RZP_PLAN_CREATOR',
-  studio:  'RZP_PLAN_STUDIO'
-};
+//
+// Pricing model: one-time credit top-ups via Razorpay ORDERS. 1 credit = Rs.1.
+// No plan ids, no recurring-billing activation needed.
 
 module.exports = (req, res) => {
   if (req.method !== 'GET') {
@@ -20,22 +17,13 @@ module.exports = (req, res) => {
   const keyId  = process.env.RAZORPAY_KEY_ID || '';
   const secret = process.env.RAZORPAY_KEY_SECRET || '';
 
-  const plans = {};
-  let anyPlan = false;
-  for (const [tier, envName] of Object.entries(PLAN_ENV)) {
-    const id = process.env[envName] || null;
-    plans[tier] = id;
-    if (id) anyPlan = true;
-  }
+  const enabled = Boolean(keyId && secret);
 
-  const enabled = Boolean(keyId && secret && anyPlan);
-
-  // Tell the UI exactly what is missing, so the Plans page can say something
+  // Tell the UI exactly what is missing, so the Credits page can say something
   // useful instead of failing silently.
   const missing = [];
   if (!keyId)  missing.push('RAZORPAY_KEY_ID');
   if (!secret) missing.push('RAZORPAY_KEY_SECRET');
-  if (!anyPlan) missing.push('at least one RZP_PLAN_* id');
 
   // Generation is a separate switch from payments — either can go live first.
   const genReady = Boolean(
@@ -48,7 +36,15 @@ module.exports = (req, res) => {
     enabled,
     generation: { enabled: genReady },
     keyId: enabled ? keyId : null,   // publishable key only, and only once live
-    plans,
+    topup: {
+      currency: 'INR',
+      creditsPerRupee: 1,
+      min: Number(process.env.RZP_MIN_TOPUP_INR || 10),
+      max: Number(process.env.RZP_MAX_TOPUP_INR || 50000)
+    },
+    // Credits are bought, not billed monthly. Kept so older builds of the page
+    // that still read `plans` degrade quietly instead of throwing.
+    plans: {},
     mode: keyId.startsWith('rzp_live_') ? 'live'
         : keyId.startsWith('rzp_test_') ? 'test'
         : 'unconfigured',
