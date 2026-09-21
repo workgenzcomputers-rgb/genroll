@@ -14,7 +14,7 @@ const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').re
 
 function credentials() {
   const combined = process.env.HIGGSFIELD_CREDENTIALS;
-  if (combined && combined.includes(':')) return combined;
+  if (combined) return combined;
   const id = process.env.HIGGSFIELD_KEY_ID;
   const secret = process.env.HIGGSFIELD_KEY_SECRET;
   if (id && secret) return `${id}:${secret}`;
