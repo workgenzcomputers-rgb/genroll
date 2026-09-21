@@ -15,6 +15,8 @@
 
 // Bounds must match the Credits page (min 10, max 50000). They are enforced
 // HERE as well, because anything the browser sends can be forged.
+const L = require('./_lib');
+
 const MIN_INR = Number(process.env.RZP_MIN_TOPUP_INR || 10);
 const MAX_INR = Number(process.env.RZP_MAX_TOPUP_INR || 50000);
 
@@ -46,6 +48,19 @@ module.exports = async (req, res) => {
     });
   }
 
+  // Stamp the buyer onto the order. This is what lets the webhook credit the
+  // right balance later, when there is no browser and no cookie in sight.
+  let userId = null;
+  if (L.authReady) {
+    userId = L.currentUserId(req);
+    if (!userId) {
+      return res.status(401).json({
+        error: 'sign_in_required',
+        message: 'Sign in before adding credits, so they land in your account.'
+      });
+    }
+  }
+
   const payload = {
     amount: amountInr * 100,          // paise
     currency: 'INR',
@@ -53,6 +68,8 @@ module.exports = async (req, res) => {
     notes: {
       credits: String(amountInr),     // 1 credit = ₹1
       source: 'genroll.in',
+      // The webhook has no cookie to read, so the buyer is stamped here.
+      user_id: userId || '',
       customer_email: String(body.email || '').slice(0, 120)
     }
   };

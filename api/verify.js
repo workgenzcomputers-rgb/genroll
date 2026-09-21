@@ -11,6 +11,7 @@
 //  Getting them the wrong way round is the single most common integration bug.)
 
 const crypto = require('crypto');
+const L = require('./_lib');
 
 // Constant-time compare so we do not leak signature bytes via timing.
 function safeEqual(a, b) {
@@ -82,13 +83,23 @@ module.exports = async (req, res) => {
 
     const credits = Math.floor(Number(data.amount || 0) / 100); // 1 credit = Rs.1
 
-    // ---------------------------------------------------------------------
-    // TODO (needs a database — see the go-live notes):
-    // Persist { payment.id, order_id, amount, notes.customer_email } and add
-    // `credits` to that customer's balance, keyed on payment.id so a repeated
-    // call cannot credit twice. Until then this endpoint only proves the
-    // payment is authentic; it does not remember anything.
-    // ---------------------------------------------------------------------
+    // Credit the buyer now so the balance updates while they are still looking
+    // at the page. The webhook does the same thing independently; addCredits is
+    // keyed on the payment id, so whichever arrives second changes nothing.
+    let credited = null;
+    if (L.authReady) {
+      const userId = L.currentUserId(req);
+      if (userId && credits > 0) {
+        try {
+          const out = await L.addCredits(userId, credits, data.id);
+          credited = out.balance;
+        } catch (err) {
+          // The money is real either way — let the webhook settle it rather
+          // than failing the response in the customer's face.
+          console.error('credit_failed', data.id, userId, err.message);
+        }
+      }
+    }
 
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
@@ -101,7 +112,8 @@ module.exports = async (req, res) => {
         credits,
         method: data.method || null,
         email: (data.notes && data.notes.customer_email) || data.email || null
-      }
+      },
+      balance: credited
     });
   } catch (err) {
     console.error('verify_exception', err);

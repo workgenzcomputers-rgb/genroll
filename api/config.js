@@ -23,18 +23,20 @@ module.exports = (req, res) => {
   // these two the moment a KV store is linked to the project, so this flag
   // flips on by itself — and until it does, the Credits page keeps its
   // top-up button shut rather than taking money for nothing.
-  const ledgerReady = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  const L = require('./_lib');
+  const ledgerReady = L.authReady;
 
   // Tell the UI exactly what is missing, so the Credits page can say something
   // useful instead of failing silently.
   const missing = [];
   if (!keyId)  missing.push('RAZORPAY_KEY_ID');
   if (!secret) missing.push('RAZORPAY_KEY_SECRET');
-  if (!ledgerReady) missing.push('a credit store (link Vercel KV)');
+  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) missing.push('a credit store (link Vercel KV)');
+  if (!process.env.SESSION_SECRET) missing.push('SESSION_SECRET');
 
   // Generation is a separate switch from payments — either can go live first.
   const genReady = Boolean(
-        process.env.HIGGSFIELD_CREDENTIALS ||
+    process.env.HIGGSFIELD_CREDENTIALS ||
     (process.env.HIGGSFIELD_KEY_ID && process.env.HIGGSFIELD_KEY_SECRET)
   );
 
@@ -43,6 +45,11 @@ module.exports = (req, res) => {
     enabled,
     generation: { enabled: genReady },
     ledger: { enabled: ledgerReady },
+    auth: {
+      enabled: L.authReady,
+      google: L.authReady && L.googleReady,
+      email: L.authReady && L.emailReady
+    },
     keyId: enabled ? keyId : null,   // publishable key only, and only once live
     topup: {
       currency: 'INR',

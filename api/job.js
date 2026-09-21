@@ -10,7 +10,27 @@
 // Higgsfield keeps output files for at least seven days — copy anything you
 // need to keep into your own storage before then.
 
+const L = require('./_lib');
+
 const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').replace(/\/+$/, '');
+
+// A job that ends as failed or nsfw produced nothing, so the credits taken at
+// the start go back. The guard key makes this happen exactly once, however
+// many times the browser polls.
+async function refundIfDead(id, status) {
+  if (!L.authReady) return;
+  if (status !== 'failed' && status !== 'nsfw') return;
+  try {
+    const record = await L.getJSON(`job:${id}`);
+    if (!record || !record.userId || !record.cost) return;
+    const first = await L.cmd('SET', `refunded:${id}`, '1', 'NX', 'EX', String(30 * 86400));
+    if (first === null) return;
+    await L.refundCredits(record.userId, record.cost);
+    console.log('refunded', id, record.userId, record.cost, status);
+  } catch (err) {
+    console.error('refund_check_failed', id, err.message);
+  }
+}
 
 function credentials() {
   const combined = process.env.HIGGSFIELD_CREDENTIALS;
@@ -69,6 +89,8 @@ module.exports = async (req, res) => {
     }
 
     const status = data.status || 'unknown';
+    await refundIfDead(id, status);
+
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       status,

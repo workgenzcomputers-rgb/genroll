@@ -15,6 +15,7 @@
 // would fail.
 
 const crypto = require('crypto');
+const L = require('./_lib');
 
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -79,11 +80,26 @@ module.exports = async (req, res) => {
   // Everything below is logging only. Wire these branches to your database
   // when you add one — the comments say exactly what each event should do.
   switch (type) {
-    case 'payment.captured':
-      // Money is settled. THIS is where credits get added, keyed on pay.id so
-      // a retried webhook cannot credit the same payment twice.
-      console.log('payment.captured', pay && pay.id, pay && pay.order_id, credits, pay && pay.notes);
+    case 'payment.captured': {
+      // Money is settled. This is the reliable credit: the browser may be long
+      // gone. addCredits is keyed on the payment id, so a retried webhook — or
+      // /api/verify having already run — cannot double-count.
+      const userId = pay && pay.notes && pay.notes.user_id;
+      console.log('payment.captured', pay && pay.id, pay && pay.order_id, credits, userId || '(no user)');
+      if (L.authReady && userId && credits > 0) {
+        try {
+          const out = await L.addCredits(userId, credits, pay.id);
+          console.log(out.added ? 'credited' : 'already_credited', userId, credits, '->', out.balance);
+        } catch (err) {
+          // Do not 5xx: Razorpay would retry forever. Log loudly instead so
+          // the payment can be settled by hand.
+          console.error('CREDIT_FAILED_NEEDS_MANUAL_FIX', pay.id, userId, credits, err.message);
+        }
+      } else if (credits > 0 && !userId) {
+        console.error('CREDIT_ORPHANED_NO_USER_ID', pay && pay.id, credits);
+      }
       break;
+    }
 
     case 'payment.authorized':
       // Authorised but not yet captured. With auto-capture on (the default for
