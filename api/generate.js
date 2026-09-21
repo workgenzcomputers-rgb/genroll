@@ -23,7 +23,8 @@ const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').re
 const ALLOWED_PATHS = new Set([
   '/higgsfield-ai/soul/v2/standard',
   '/flux-pro/kontext/max/text-to-image',
-  '/v1/image2video/dop'
+  '/v1/image2video/dop',
+  '/bytedance/seedance-2.5/text-to-video'
 ]);
 
 function credentials() {
