@@ -86,64 +86,67 @@ days. Anything a customer should keep must be copied into your own storage
 
 ---
 
-## Switch 2 — Payments (Razorpay Subscriptions)
+## Switch 2 — Payments (Razorpay Orders — credit top-ups)
+
+The site sells **credits, not subscriptions**: 1 credit = ₹1, bought whenever
+the customer wants. That means **no monthly Plans, and no recurring-billing
+activation** — those are only needed for the Subscriptions API, which this site
+no longer uses. If you already created Plans in the dashboard, just ignore them.
 
 ### a) Account
 
-1. Sign up at razorpay.com and complete **KYC** — business PAN, bank account,
-   address proof. Expect a few working days.
-2. In the dashboard, request **Subscriptions** to be enabled. Recurring billing
-   is a separate activation from ordinary payments, and it is the step people
-   forget.
+Sign up at razorpay.com and complete **KYC** — business PAN, bank account,
+address proof. Expect a few working days. Test mode works before KYC finishes.
 
-### b) Create the three plans
+### b) Keys
 
-Dashboard → **Subscriptions → Plans → Create Plan**, billing cycle **Monthly**:
-
-| Plan | Amount | Copy the plan id into |
-|---|---|---|
-| Starter | ₹499 | `RZP_PLAN_STARTER` |
-| Creator | ₹1,499 | `RZP_PLAN_CREATOR` |
-| Studio | ₹4,999 | `RZP_PLAN_STUDIO` |
-
-Plan ids look like `plan_XXXXXXXXXXXXXX`. The amounts must match what the site
-shows, or the page becomes a lie.
-
-### c) Keys and webhook
+Dashboard → **Settings → API Keys → Generate Key**.
 
 | Variable | Where it comes from |
 |---|---|
-| `RAZORPAY_KEY_ID` | Settings → API Keys (starts `rzp_test_` or `rzp_live_`) |
-| `RAZORPAY_KEY_SECRET` | shown **once** when you generate the key — save it then |
-| `RAZORPAY_WEBHOOK_SECRET` | you choose this when creating the webhook |
-| `RZP_PLAN_STARTER` / `RZP_PLAN_CREATOR` / `RZP_PLAN_STUDIO` | from step (b) |
+| `RAZORPAY_KEY_ID` | shown in the dashboard (starts `rzp_test_` or `rzp_live_`) |
+| `RAZORPAY_KEY_SECRET` | shown **once**, at generation — save it right then |
+| `RAZORPAY_WEBHOOK_SECRET` | you choose this when creating the webhook (step c) |
+| `RZP_MIN_TOPUP_INR` | *(optional)* smallest top-up, default `10` |
+| `RZP_MAX_TOPUP_INR` | *(optional)* largest top-up, default `50000` |
 
-Then Settings → **Webhooks → Add New Webhook**:
+The min/max are enforced **server-side** in `api/create-order.js`, because
+anything the browser sends can be forged. Keep them matching the Credits page.
+
+### c) Webhook
+
+Settings → **Webhooks → Add New Webhook**:
 
 - **URL:** `https://genroll.in/api/webhook`
 - **Secret:** any long random string — put the same value in `RAZORPAY_WEBHOOK_SECRET`
-- **Events:** `subscription.activated`, `subscription.charged`,
-  `subscription.pending`, `subscription.halted`, `subscription.cancelled`,
-  `subscription.completed`
+- **Events:** `payment.captured`, `payment.failed`, `payment.authorized`,
+  and optionally `order.paid`, `refund.processed`
 
 The webhook secret is a **different value** from your API key secret.
 
-### d) What happens then
+**Why the webhook matters more than the checkout callback.** The callback comes
+from the customer's browser and can be lost — closed tab, dead phone, bad
+network. `payment.captured` always arrives. Credits should be granted there,
+keyed on the payment id so a retried webhook cannot credit twice.
 
-The Plans page buttons change from *"Payments disabled"* to *"Subscribe →"* on
-their own, and the header pill says whether you're in test or live mode. Test
-mode is safe: cards are simulated and no money moves.
+### d) Signature order — the one thing people get wrong
 
----
+Orders and Subscriptions sign in **opposite orders**:
 
-## UPI AutoPay — two rules worth knowing
+| Flow | Signed string |
+|---|---|
+| Orders (what this site uses) | `order_id + "\|" + payment_id` |
+| Subscriptions | `payment_id + "\|" + subscription_id` |
 
-- **₹15,000 per debit** is the standard ceiling that goes through without the
-  customer re-authenticating. All three plans sit well under it, so renewals are
-  frictionless.
-- **A pre-debit notification is required at least 24 hours before every
-  charge.** The code sets `customer_notify: 1`, which makes Razorpay send these
-  for you. Leave it on.
+`api/verify.js` uses the Orders form, and additionally re-reads the payment
+from Razorpay so the credited amount comes from Razorpay's record rather than
+from the browser.
+
+### e) What happens then
+
+`/api/config` starts returning `enabled: true` and the Credits page buttons
+switch from *"Payments disabled"* to a working top-up. The header pill says
+test or live. Test mode is safe — cards are simulated and no money moves.
 
 ---
 
@@ -152,14 +155,15 @@ mode is safe: cards are simulated and no money moves.
 The payment plumbing is complete and verified; the *business* logic behind it is
 not, because it needs a database:
 
-1. **No customer accounts.** There is no sign-in, so a subscription can't yet be
+1. **No customer accounts.** There is no sign-in, so credits can't yet be
    attached to a person. `api/verify.js` proves a payment is real but stores
    nothing — there's a marked `TODO` where the write belongs.
-2. **The allowance pool isn't metered.** Plans promise a monthly ₹ pool; nothing
-   counts spend against it yet. `subscription.charged` in `api/webhook.js` is
-   where the monthly reset goes.
+2. **No credit balance.** Nothing records how many credits were bought, and
+   nothing deducts them when a generation runs. **This is the blocker: until it
+   exists, a customer can pay real money and receive nothing.** Keep live keys
+   off the site until it does — test keys only.
 3. **Generated media isn't stored.** Higgsfield expires files in ~7 days.
-4. **No cancel / pause UI.** Customers can only cancel from the Razorpay emails.
+4. **No refund path.** Refunds have to be issued by hand in the dashboard.
 
 Vercel Postgres or KV plus a simple email sign-in closes all four. Until then,
 keep the honest disclosures on the Plans page exactly as they are — they
@@ -177,7 +181,8 @@ curl -s https://genroll.in/api/config | jq
 ```
 
 - Payments should be tested with Razorpay **test** keys first, end to end,
-  before live keys go anywhere near the site.
+  before live keys go anywhere near the site — and not at all before credit
+  balances exist (see *Still to build*).
 - After adding or changing any variable: **redeploy**.
 
 ---
@@ -188,9 +193,9 @@ curl -s https://genroll.in/api/config | jq
 |---|---|
 | `index.html` | the whole front end, single file |
 | `api/config.js` | tells the browser what's switched on — never returns a secret |
-| `api/create-subscription.js` | creates a Razorpay subscription for a tier |
-| `api/verify.js` | verifies the checkout signature (`payment_id\|subscription_id`) |
-| `api/webhook.js` | receives Razorpay events; the only reliable renewal signal |
+| `api/create-order.js` | creates a Razorpay order for a credit top-up |
+| `api/verify.js` | verifies the checkout signature (`order_id\|payment_id`) |
+| `api/webhook.js` | receives Razorpay events; the reliable record of payment |
 | `api/generate.js` | starts a Higgsfield job |
 | `api/job.js` | polls a Higgsfield job |
 
