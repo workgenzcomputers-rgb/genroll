@@ -19,11 +19,18 @@ module.exports = (req, res) => {
 
   const enabled = Boolean(keyId && secret);
 
+  // Credits are only worth selling if we can remember them. Vercel injects
+  // these two the moment a KV store is linked to the project, so this flag
+  // flips on by itself — and until it does, the Credits page keeps its
+  // top-up button shut rather than taking money for nothing.
+  const ledgerReady = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
   // Tell the UI exactly what is missing, so the Credits page can say something
   // useful instead of failing silently.
   const missing = [];
   if (!keyId)  missing.push('RAZORPAY_KEY_ID');
   if (!secret) missing.push('RAZORPAY_KEY_SECRET');
+  if (!ledgerReady) missing.push('a credit store (link Vercel KV)');
 
   // Generation is a separate switch from payments — either can go live first.
   const genReady = Boolean(
@@ -35,6 +42,7 @@ module.exports = (req, res) => {
   return res.status(200).json({
     enabled,
     generation: { enabled: genReady },
+    ledger: { enabled: ledgerReady },
     keyId: enabled ? keyId : null,   // publishable key only, and only once live
     topup: {
       currency: 'INR',
