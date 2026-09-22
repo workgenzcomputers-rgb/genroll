@@ -596,49 +596,41 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
      rather than pretending. Specs are deliberately thin — they are marked
      partial because they have not been verified against a live account. */
   var LIVE_MODELS = {
-    image: [
-      {
-        id: 'higgsfield-soul-v2',
-        name: 'Soul v2',
-        provider: 'Higgsfield',
-        status: 'partial',
-        modes: ['generate'],
-        endpoint: '/higgsfield-ai/soul/v2/standard',
-        limits: [
-          'Text-to-image, run through this deployment’s own key.',
-          'Output sizes and options are not verified yet.'
-        ],
-        source: 'https://docs.higgsfield.ai'
-      },
-      {
-        id: 'flux-kontext-max',
-        name: 'FLUX.1 Kontext Max',
-        provider: 'Black Forest Labs · via Higgsfield',
-        status: 'partial',
-        modes: ['generate'],
-        endpoint: '/flux-pro/kontext/max/text-to-image',
-        limits: [
-          'Text-to-image.',
-          'Output sizes and options are not verified yet.'
-        ],
-        source: 'https://docs.higgsfield.ai'
-      }
-    ],
-    video: [
-      {
-        id: 'higgsfield-dop',
-        name: 'DoP Image-to-Video',
-        provider: 'Higgsfield',
-        status: 'partial',
-        modes: ['generate'],
-        endpoint: '/v1/image2video/dop',
-        limits: [
-          'Animates a still image into a short clip.',
-          'Duration and resolution options are not verified yet.'
-        ],
-        source: 'https://docs.higgsfield.ai'
-      }
-    ]
+    image: [{
+      id: 'higgsfield-soul-v2',
+      name: 'Soul v2',
+      provider: 'Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/higgsfield-ai/soul/v2/standard',
+      limits: [
+        'Text-to-image, on this deployment\u2019s own Higgsfield key.',
+        'Size and style options are not verified against a live generation yet.'
+      ],
+      source: 'https://docs.higgsfield.ai',
+      references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai',
+        checked: '2026-09-22', note: 'Reference limit unverified; this build sends the prompt only.' }
+    }],
+    video: [{
+      id: 'seedance2_5',
+      name: 'Seedance 2.5',
+      provider: 'ByteDance \u00b7 via Higgsfield',
+      status: 'verified',
+      modes: ['generate'],
+      endpoint: '/bytedance/seedance-2.5/text-to-video',
+      resolutions: ['720p', '480p'],
+      ratios: ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'],
+      formats: ['MP4', 'MOV'],
+      outputSeconds: { min: 4, max: 30, step: 1 },
+      limits: [
+        'Text-to-video, with audio.',
+        '4\u201330 seconds \u00b7 480p or 720p \u00b7 six aspect ratios.'
+      ],
+      source: 'https://open.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video/api-reference',
+      references: { image: 1, unverified: true,
+        source: 'https://open.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video/api-reference',
+        checked: '2026-09-22', note: 'This build sends a text prompt only.' }
+    }]
   };
 
   function endpointFor(model) {
@@ -712,7 +704,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         : 'This deployment does not accept payments yet.';
     }
 
-    if (genOn) addLiveModels();
+    addLiveModels();
   }
 
   /* The three plan cards are shortcuts into the same top-up flow: each one
@@ -748,35 +740,35 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
   /* ---- catalog additions ------------------------------------------------ */
 
-  // Models already in the catalog that this deployment CAN run. Seedance 2.5
-  // is served by Higgsfield, so the provider line is corrected at the same
-  // time — the card should not keep naming a route we do not use.
-  var CONNECT_EXISTING = {
-    seedance2_5: {
-      endpoint: '/bytedance/seedance-2.5/text-to-video',
-      provider: 'ByteDance \u00b7 via Higgsfield'
-    }
-  };
-
-  var added = false;
+  /* Probed against the live account on 22 Sep 2026 by calling each endpoint
+     and reading the status code:
+       /higgsfield-ai/soul/v2/standard        403 not_enough_credits -> exists
+       /bytedance/seedance-2.5/text-to-video  403 not_enough_credits -> exists
+       /flux-pro/kontext/max/text-to-image    404 model_not_found    -> gone
+       /v1/image2video/dop                    422 missing 'params'   -> other shape
+     A 403 means the key was accepted and only credits are missing, so those
+     two are real. The catalog is cut down to them: a model this key cannot
+     run has no business sitting in the picker looking available. */
+  var applied = false;
   function addLiveModels() {
-    if (added || typeof CATALOG === 'undefined') return;
-    added = true;
-    Object.keys(LIVE_MODELS).forEach(function (kind) {
-      LIVE_MODELS[kind].forEach(function (m) {
-        if (!CATALOG[kind].some(function (x) { return x.id === m.id; })) CATALOG[kind].unshift(m);
-      });
-    });
-    // Attach endpoints to entries the catalog already had.
-    ['image', 'video'].forEach(function (kind) {
-      (CATALOG[kind] || []).forEach(function (m) {
-        var hit = CONNECT_EXISTING[m.id];
-        if (!hit) return;
-        m.endpoint = hit.endpoint;
-        if (hit.provider) m.provider = hit.provider;
-      });
-    });
+    if (applied || typeof CATALOG === 'undefined') return;
+    applied = true;
+    CATALOG.image = LIVE_MODELS.image;
+    CATALOG.video = LIVE_MODELS.video;
+    CATALOG.audio = { speech: [], lipsync: [], clone: [], dub: [] };
     try { renderModels(); renderCatalog(); } catch (e) {}
+  }
+
+  // With the audio families emptied, their headings would sit on the Models
+  // page counting to zero. Drop any group that ends up with nothing in it.
+  if (typeof renderCatalog === 'function') {
+    var renderCatalogInner = renderCatalog;
+    renderCatalog = function () {
+      renderCatalogInner();
+      document.querySelectorAll('#catalog .catalog-group').forEach(function (g) {
+        if (!g.querySelector('.model-card')) g.remove();
+      });
+    };
   }
 
   /* ---- generation ------------------------------------------------------- */
