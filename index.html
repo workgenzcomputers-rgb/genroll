@@ -609,7 +609,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       ],
       source: 'https://docs.higgsfield.ai',
       references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai',
-        checked: '2026-09-22', note: 'Reference limit unverified; this build sends the prompt only.' }
+        checked: '2026-09-22', note: 'This build sends the prompt only.' }
     }],
     video: [{
       id: 'seedance2_5',
@@ -630,6 +630,34 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       references: { image: 1, unverified: true,
         source: 'https://open.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video/api-reference',
         checked: '2026-09-22', note: 'This build sends a text prompt only.' }
+    }, {
+      id: 'kling-2-5-turbo-pro',
+      name: 'Kling 2.5 Turbo Pro',
+      provider: 'Kling AI \u00b7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/kling-video/v2.5-turbo/pro/text-to-video',
+      limits: [
+        'Text-to-video.',
+        'Duration, resolution and ratio options are not verified yet \u2014 this build sends the prompt only.'
+      ],
+      source: 'https://docs.higgsfield.ai/docs/openapi.json',
+      references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai/docs/openapi.json',
+        checked: '2026-09-22', note: 'Endpoint confirmed against the live key; options unverified.' }
+    }, {
+      id: 'hailuo-2-3',
+      name: 'Hailuo 2.3',
+      provider: 'MiniMax \u00b7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/minimax/hailuo-2.3/standard/text-to-video',
+      limits: [
+        'Text-to-video.',
+        'Duration, resolution and ratio options are not verified yet \u2014 this build sends the prompt only.'
+      ],
+      source: 'https://docs.higgsfield.ai/docs/openapi.json',
+      references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai/docs/openapi.json',
+        checked: '2026-09-22', note: 'Endpoint confirmed against the live key; options unverified.' }
     }]
   };
 
