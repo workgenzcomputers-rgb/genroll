@@ -24,21 +24,27 @@ const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').re
 // are deliberately flat and conservative: a wrong guess here is money, so the
 // number is charged up front and refunded in full if the job does not produce
 // anything. Override per deployment without touching code.
+const IMAGE = Number(process.env.COST_IMAGE || 5);
+const VIDEO = Number(process.env.COST_VIDEO || 40);
+
 const COST = {
-  '/higgsfield-ai/soul/v2/standard': Number(process.env.COST_IMAGE || 5),
-  '/flux-pro/kontext/max/text-to-image': Number(process.env.COST_IMAGE || 5),
-  '/v1/image2video/dop': Number(process.env.COST_VIDEO || 40),
-  '/bytedance/seedance-2.5/text-to-video': Number(process.env.COST_VIDEO || 40)
+  '/higgsfield-ai/soul/v2/standard': IMAGE,
+  '/higgsfield-ai/soul/standard': IMAGE,
+  '/bytedance/seedance-2.5/text-to-video': VIDEO,
+  '/kling-video/v2.5-turbo/pro/text-to-video': VIDEO,
+  '/kling-video/v2.5-turbo/pro/image-to-video': VIDEO,
+  '/kling-video/v2.5-turbo/standard/image-to-video': VIDEO,
+  '/minimax/hailuo-2.3/standard/text-to-video': VIDEO,
+  '/minimax/hailuo-2.3/standard/image-to-video': VIDEO,
+  '/v1/image2video/dop': VIDEO
 };
 
 // Only these endpoint paths may be called, so a visitor cannot point this
 // function at an arbitrary URL. Add the ones your account actually has.
-const ALLOWED_PATHS = new Set([
-  '/higgsfield-ai/soul/v2/standard',
-  '/flux-pro/kontext/max/text-to-image',
-  '/v1/image2video/dop',
-  '/bytedance/seedance-2.5/text-to-video'
-]);
+// Paths come from Higgsfield's own OpenAPI document, plus the two confirmed by
+// probing this key directly. FLUX Kontext Max was removed: it answers 404
+// model_not_found, so this account cannot call it.
+const ALLOWED_PATHS = new Set(Object.keys(COST));
 
 function credentials() {
   // The console now issues ONE key string, so take it verbatim; older
