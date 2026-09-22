@@ -958,4 +958,224 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 })();
 
 </script>
+<script>
+/* ---------------------------------------------------------------------------
+   Sign-in UI.
+
+   Reuses the page's own <dialog> and toast rather than adding new chrome, so
+   signing in looks like part of the app instead of bolted on. Everything here
+   is driven by /api/auth?action=me — if auth is off, nothing appears.
+--------------------------------------------------------------------------- */
+(function () {
+  'use strict';
+
+  var q = function (s) { return document.querySelector(s); };
+  var ME = { signedIn: false, available: false, email: null, credits: 0 };
+  var AUTH = { google: false, email: false, enabled: false };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ---- read the session ---------------------------------------------------- */
+
+  async function loadAuthConfig() {
+    try {
+      var cfg = await fetch('/api/config', { cache: 'no-store' }).then(function (r) { return r.json(); });
+      AUTH = cfg.auth || AUTH;
+    } catch (e) {}
+  }
+
+  async function loadMe() {
+    try {
+      var r = await fetch('/api/auth?action=me', { cache: 'no-store' });
+      ME = await r.json();
+    } catch (e) {
+      ME = { signedIn: false, available: false };
+    }
+    paint();
+    return ME;
+  }
+
+  function paint() {
+    var balance = q('#credit-balance');
+    if (balance && ME.signedIn) balance.textContent = Number(ME.credits || 0);
+
+    var circle = q('.credit-circle');
+    if (circle) {
+      circle.setAttribute('aria-label', ME.signedIn
+        ? 'Available credits: ' + (ME.credits || 0) + '. Add credits'
+        : 'Sign in to see your credits');
+    }
+
+    // The profile popover is where an account belongs. Give it a real row:
+    // who you are and a way out, or a way in.
+    var popover = q('#profile-popover');
+    if (!popover || !ME.available) return;
+
+    var row = q('#account-row');
+    if (!row) {
+      row = document.createElement('div');
+      row.id = 'account-row';
+      row.style.cssText = 'padding:11px 13px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.5';
+      popover.insertBefore(row, popover.firstChild);
+    }
+    row.innerHTML = ME.signedIn
+      ? '<div class="muted" style="font:11px var(--mono);letter-spacing:.12em">SIGNED IN</div>'
+        + '<div style="margin:2px 0 8px;word-break:break-all">' + esc(ME.email) + '</div>'
+        + '<button type="button" id="sign-out" style="font-size:12px;padding:5px 10px">Sign out</button>'
+      : '<button type="button" id="sign-in" class="primary" style="width:100%">Sign in</button>';
+
+    var out = q('#sign-out');
+    if (out) out.onclick = signOut;
+    var into = q('#sign-in');
+    if (into) into.onclick = function () { openSignIn(); };
+  }
+
+  /* ---- the dialog ---------------------------------------------------------- */
+
+  function openSignIn(reason) {
+    var auth = AUTH;
+    var title = q('#dialog-title');
+    var body = q('#dialog-content');
+    if (!title || !body) return;
+
+    title.textContent = 'Sign in to Genroll';
+
+    var html = '';
+    if (reason) html += '<p class="note" style="margin-bottom:14px">' + esc(reason) + '</p>';
+
+    if (auth.google) {
+      html += '<button type="button" id="go-google" class="primary" style="width:100%;margin-bottom:12px">'
+        + 'Continue with Google</button>';
+    }
+
+    if (auth.email) {
+      html += '<label class="field" for="signin-email"><span class="field-label">Or your email</span>'
+        + '<input id="signin-email" type="email" inputmode="email" autocomplete="email" '
+        + 'placeholder="you@example.com"></label>'
+        + '<button type="button" id="go-email" style="width:100%;margin-top:10px">Send me a sign-in link</button>';
+    } else {
+      html += '<p class="note">Email sign-in is not switched on for this deployment yet.</p>';
+    }
+
+    if (!auth.google && !auth.email) {
+      html = '<p class="note">Sign-in is not switched on for this deployment yet.</p>';
+    }
+
+    html += '<p class="note" id="signin-note" role="status" aria-live="polite" style="margin-top:12px"></p>';
+    body.innerHTML = html;
+
+    var gb = q('#go-google');
+    if (gb) gb.onclick = function () { location.href = '/api/auth?action=google'; };
+
+    var eb = q('#go-email');
+    if (eb) eb.onclick = sendLink;
+
+    q('#media-dialog').showModal();
+  }
+
+  async function sendLink() {
+    var input = q('#signin-email');
+    var note = q('#signin-note');
+    var button = q('#go-email');
+    var email = (input.value || '').trim();
+    if (!email || email.indexOf('@') < 1) {
+      note.textContent = 'Enter the email address you want the link sent to.';
+      input.focus();
+      return;
+    }
+    button.disabled = true;
+    note.textContent = 'Sending…';
+    try {
+      var r = await fetch('/api/auth?action=email-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      });
+      var d = await r.json().catch(function () { return {}; });
+      if (r.ok && d.sent) {
+        note.textContent = 'Link sent. Check your inbox — it works once and expires in 15 minutes.';
+        button.textContent = 'Sent';
+      } else {
+        note.textContent = d.message || 'That did not work. Try again in a moment.';
+        button.disabled = false;
+      }
+    } catch (e) {
+      note.textContent = 'Could not reach the server. Try again.';
+      button.disabled = false;
+    }
+  }
+
+  async function signOut() {
+    try { await fetch('/api/auth?action=logout', { method: 'POST' }); } catch (e) {}
+    location.href = '/';
+  }
+
+  /* ---- reasons the app asks you to sign in --------------------------------- */
+  // /api/generate and /api/create-order answer 401 sign_in_required. Catch that
+  // centrally so every caller gets the dialog instead of a dead end.
+  var realFetch = window.fetch;
+  window.fetch = async function (input, init) {
+    var response = await realFetch(input, init);
+    try {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (response.status === 401 && /\/api\/(generate|create-order)/.test(url)) {
+        var copy = response.clone();
+        var data = await copy.json().catch(function () { return {}; });
+        if (data.error === 'sign_in_required') openSignIn(data.message);
+      }
+      if (response.status === 402 && /\/api\/generate/.test(url)) {
+        var c2 = response.clone();
+        var d2 = await c2.json().catch(function () { return {}; });
+        if (d2.error === 'insufficient_credits') {
+          try { toast(d2.message + ' Add credits from the Credits page.'); } catch (e) {}
+          try { setPage('plans'); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+    return response;
+  };
+
+  /* ---- arriving back from a sign-in --------------------------------------- */
+
+  function readReturn() {
+    var params = new URLSearchParams(location.search);
+    var ok = params.get('signed-in');
+    var err = params.get('sign-in-error');
+    if (!ok && !err) return;
+    history.replaceState(null, '', location.pathname + location.hash);
+    if (ok) { try { toast('Signed in.'); } catch (e) {} }
+    if (err) {
+      var messages = {
+        state_mismatch: 'That sign-in attempt could not be verified. Please try again.',
+        bad_state: 'That sign-in attempt could not be verified. Please try again.',
+        not_configured: 'Google sign-in is not switched on for this deployment.',
+        email_unverified: 'That Google account has no verified email address.',
+        access_denied: 'Sign-in was cancelled.'
+      };
+      try { toast(messages[err] || 'Sign-in did not complete (' + err + ').'); } catch (e) {}
+    }
+  }
+
+  /* ---- go ----------------------------------------------------------------- */
+
+  // Let the credits circle be a way in when nobody is signed in.
+  var circle = document.querySelector('.credit-circle');
+  if (circle) {
+    circle.addEventListener('click', function (e) {
+      if (ME.available && !ME.signedIn) { e.preventDefault(); e.stopPropagation(); openSignIn(); }
+    }, true);
+  }
+
+  window.__GENROLL_SIGNIN = openSignIn;
+  window.__GENROLL_REFRESH_ME = loadMe;
+
+  readReturn();
+  loadAuthConfig().then(loadMe);
+})();
+
+</script>
 </body></html>
