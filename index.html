@@ -333,6 +333,50 @@ button:not(.primary):not(nav button):hover{
 .tools button.active{background:rgba(255,255,255,.1)}
 
 ::-webkit-scrollbar-track{background:transparent}
+
+/* ---- cost control ------------------------------------------------------- */
+/* Scrolling was janky, and most of the blur above was being spent on nothing.
+   What sits behind the panels is the fixed gradient, which has no detail in
+   it, so blurring it produces an image you cannot tell apart from a plain
+   translucent fill, at the price of re-rasterising a full-screen layer on
+   every scroll frame. Blur is kept only where something with detail really
+   does pass behind: the sticky header, the dialog, the popover, the toast.
+   That took the count of blurred surfaces from eighteen to four. */
+
+body:before{filter:none;will-change:transform}
+body:after{will-change:transform}
+
+/* Without the blur the fill carries each panel on its own, so it goes up a
+   little. Changing the token covers .glass, .model-card, .plan and .featured
+   in one place. */
+:root{
+  --glass-bg:linear-gradient(140deg,rgba(255,255,255,.10),rgba(255,255,255,.045) 55%,rgba(255,255,255,.075));
+  --panel:rgba(255,255,255,.08);
+}
+
+.glass,.composer,.model-card,.plan,.drop-zone,.credit-circle,.profile-button{
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+
+.composer{background:linear-gradient(150deg,rgba(255,255,255,.115),rgba(255,255,255,.05))}
+.credit-circle,.profile-button{background:rgba(255,255,255,.1)}
+
+/* The header is the one surface real content slides under, so it keeps a
+   proper blur. */
+header{backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%)}
+
+@media (max-width:1024px){
+  body:before,body:after{animation:none;will-change:auto}
+}
+@media (max-width:760px){
+  header{backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%)}
+}
+
+/* The wordmark is now a link, so it has to read as one. */
+.brand{cursor:pointer;border-radius:12px;padding:4px 6px;margin-left:-6px;transition:background .18s ease}
+.brand:hover{background:rgba(255,255,255,.06)}
+.brand:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
 </style></head>
 <body>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
@@ -1124,6 +1168,32 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     // settle on the next pass instead of feeding back into the observer.
     new MutationObserver(fixFields).observe(box, { childList: true });
     try { fixFields(); } catch (e) {}
+  })();
+
+  // On every other site the wordmark is the way back to the start, so make it
+  // behave like one here. It routes through the page's own Studio tab rather
+  // than a hash or a reload, so the workspace keeps whatever the visitor has
+  // already typed.
+  (function () {
+    var brand = document.querySelector('.brand');
+    if (!brand) return;
+
+    brand.setAttribute('role', 'link');
+    brand.setAttribute('tabindex', '0');
+    brand.setAttribute('aria-label', 'Genroll Studio, back to the workspace');
+
+    function goHome(e) {
+      if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      var studio = Array.prototype.slice.call(document.querySelectorAll('nav button'))
+        .filter(function (b) { return b.textContent.trim().toLowerCase() === 'studio'; })[0];
+      if (studio) studio.click();
+      var smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo(smooth ? { top: 0, behavior: 'smooth' } : 0, 0);
+    }
+
+    brand.addEventListener('click', goHome);
+    brand.addEventListener('keydown', goHome);
   })();
 
   /* ---- generation ------------------------------------------------------- */
