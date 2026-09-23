@@ -1083,40 +1083,48 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   // Hailuo 2.3 standard is fixed at 768p. Nothing here offers a resolution the
   // endpoint would reject, so there is no 1080p or 4K on this deployment until
   // a model that can actually produce it is wired up.
-  if (typeof renderFields === 'function') {
-    var renderFieldsInner = renderFields;
-    renderFields = function () {
-      renderFieldsInner();
+  //
+  // Watch the container rather than wrap renderFields(): the page calls that
+  // function through a binding of its own, so a wrapper only caught the first
+  // render and every later model change slipped straight past it.
+  (function () {
+    var box = document.getElementById('model-fields');
+    if (!box) return;
 
+    function fixFields() {
       var format = q('#field-format');
       if (format && format.closest('.field')) format.closest('.field').remove();
 
       var quality = q('#field-quality');
       if (!quality) return;
-      var qualityField = quality.closest('.field');
 
       var resolution = q('#field-resolution');
       if (resolution) {
         // Keep #field-resolution: buildInput() reads it. Relabel it instead.
         var field = resolution.closest('.field');
         var label = field && field.querySelector('.field-label');
-        if (label) label.textContent = 'Quality';
-        if (qualityField) qualityField.remove();
+        if (label && label.textContent !== 'Quality') label.textContent = 'Quality';
+        var spare = quality.closest('.field');
+        if (spare) spare.remove();
         return;
       }
 
       var model = null;
       try { model = currentModel(); } catch (e) {}
-      if (model && model.fixedQuality) {
+      if (model && model.fixedQuality && quality.value !== model.fixedQuality) {
         quality.innerHTML = '';
         var only = document.createElement('option');
         only.textContent = model.fixedQuality;
         quality.appendChild(only);
         quality.disabled = true;
       }
-    };
-    try { renderFields(); } catch (e) {}
-  }
+    }
+
+    // Each step is a no-op once it has been done, so the mutations this makes
+    // settle on the next pass instead of feeding back into the observer.
+    new MutationObserver(fixFields).observe(box, { childList: true });
+    try { fixFields(); } catch (e) {}
+  })();
 
   /* ---- generation ------------------------------------------------------- */
 
