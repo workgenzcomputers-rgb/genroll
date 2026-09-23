@@ -61,7 +61,251 @@ a,.drop-zone button,.audio-tabs .active,.allocations b,.ratio-options button[ari
 
 .profile-shell{display:flex;align-items:center;gap:12px}.credit-circle{width:54px;height:54px;border:1.5px solid #ff8a3d;border-radius:50%;background:#ff8a3d0b;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;flex-shrink:0;color:#ff8a3d;line-height:1.1}.credit-circle strong{font:600 18px/1.1 var(--sans)}.credit-circle span{font:10px/1.3 var(--mono)}.credit-circle:hover{background:#ff8a3d20}.credit-circle:focus-visible{outline:2px solid #ff8a3d;outline-offset:3px}@media(max-width:560px){.profile-shell{gap:8px}.credit-circle{width:44px;height:44px}.credit-circle strong{font-size:16px}.credit-circle span{font-size:9px}}
 </style>
-</head>
+<style id="glass-skin">/* ===========================================================================
+   Genroll Studio — glass skin
+   Appended after the page's own stylesheet, so every rule here is an override
+   and nothing above it had to be edited. Delete this block and the site is
+   exactly what it was before.
+
+   Two things make glass read as glass: something colourful behind it, and a
+   lit edge on top of it. The page already had translucent panels over a nearly
+   flat backdrop, so most of the work below is giving the backdrop some colour
+   and giving each surface an edge.
+
+   Blur is expensive on cheap Android hardware, which is most of this site's
+   traffic, so backdrop-filter is spent only on the big surfaces (header, the
+   two workspace panels, cards, dialog, popover, toast) and never on the small
+   chips. Below 760px the radius shrinks again.
+=========================================================================== */
+
+:root{
+  --glass-bg:linear-gradient(140deg,rgba(255,255,255,.075),rgba(255,255,255,.022) 55%,rgba(255,255,255,.045));
+  --glass-line:rgba(255,255,255,.14);
+  --glass-edge:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(255,255,255,.04);
+  --glass-drop:0 18px 50px rgba(3,5,20,.45);
+  --glass-blur:blur(26px) saturate(165%);
+  --panel:rgba(255,255,255,.055);
+  --line:rgba(255,255,255,.13);
+  --muted:#b3b8d0;
+}
+
+/* ---- the light behind the glass ---------------------------------------- */
+/* Without this the panels have nothing to refract and just look grey. The
+   blobs are on a fixed layer so scrolling slides the glass over them. */
+body{background:#0b0c1e}
+
+body:before{
+  content:'';position:fixed;inset:-20%;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(38% 42% at 12% 8%,rgba(255,138,61,.30),transparent 70%),
+    radial-gradient(34% 38% at 88% 14%,rgba(45,212,191,.24),transparent 70%),
+    radial-gradient(44% 46% at 74% 92%,rgba(120,90,232,.32),transparent 70%),
+    radial-gradient(30% 34% at 26% 78%,rgba(255,138,61,.16),transparent 70%);
+  filter:blur(28px);
+  animation:glass-drift 38s ease-in-out infinite alternate;
+}
+
+/* A second, slower layer so the colour never sits perfectly still. */
+body:after{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(28% 30% at 62% 30%,rgba(229,180,126,.14),transparent 72%),
+    radial-gradient(26% 28% at 30% 52%,rgba(45,212,191,.10),transparent 72%);
+  animation:glass-drift-2 52s ease-in-out infinite alternate;
+}
+
+@keyframes glass-drift{
+  from{transform:translate3d(0,0,0) scale(1)}
+  to{transform:translate3d(-3%,2.5%,0) scale(1.08)}
+}
+@keyframes glass-drift-2{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(4%,-3%,0)}
+}
+@media (prefers-reduced-motion:reduce){
+  body:before,body:after{animation:none}
+}
+
+/* ---- the glass itself --------------------------------------------------- */
+
+.glass{
+  background:var(--glass-bg);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-line);
+  border-radius:20px;
+  box-shadow:var(--glass-edge),var(--glass-drop);
+}
+
+/* The header floats over everything that scrolls under it, so it gets the
+   strongest blur and the thinnest body. */
+header{
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.028));
+  backdrop-filter:blur(30px) saturate(170%);
+  -webkit-backdrop-filter:blur(30px) saturate(170%);
+  border-bottom:1px solid rgba(255,255,255,.12);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 30px rgba(3,5,20,.28);
+}
+
+.hero{
+  background:
+    linear-gradient(125deg,rgba(255,138,61,.14),rgba(255,255,255,.03) 48%,rgba(45,212,191,.12));
+}
+
+.composer{
+  background:linear-gradient(150deg,rgba(255,255,255,.085),rgba(255,255,255,.025));
+  border-color:rgba(255,255,255,.15);
+}
+
+.model-card,.plan{
+  background:var(--glass-bg);
+  border-color:rgba(255,255,255,.13);
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+.model-card:hover,.plan:hover{
+  transform:translateY(-3px);
+  border-color:rgba(255,255,255,.24);
+  box-shadow:var(--glass-edge),0 26px 60px rgba(3,5,20,.5);
+}
+@media (hover:none){
+  .model-card:hover,.plan:hover{transform:none;box-shadow:var(--glass-edge),var(--glass-drop)}
+}
+
+.plan.featured{
+  border-color:rgba(255,172,115,.5);
+  background:linear-gradient(145deg,rgba(255,138,61,.16),rgba(45,212,191,.09)),var(--glass-bg);
+  box-shadow:var(--glass-edge),0 22px 58px rgba(255,138,61,.14),var(--glass-drop);
+}
+
+/* ---- surfaces that were opaque ----------------------------------------- */
+
+select,input[type=text],input[type=number],input[type=email],textarea{
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.14);
+  color:#eceefb;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+select:hover,input[type=text]:hover,input[type=number]:hover,input[type=email]:hover,textarea:hover{
+  background:rgba(255,255,255,.075);
+  border-color:rgba(255,255,255,.22);
+}
+select:focus,input:focus,textarea:focus{
+  background:rgba(255,255,255,.085);
+  border-color:rgba(45,212,191,.6);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 3px rgba(45,212,191,.16);
+  outline:none;
+}
+select option{background:#171a33;color:#eceefb}
+
+/* input[type=email] was never in the page's own field rule — the email sign-in
+   box is new — so it rendered at the browser's default width inside the
+   dialog. Same shape as every other field. */
+input[type=email]{display:block;width:100%;border-radius:9px;padding:11px 12px;font-size:14px;min-width:0}
+
+::placeholder{color:rgba(224,228,250,.42)}
+
+.source-input,.drop-zone{
+  background:rgba(255,255,255,.035);
+  border-color:rgba(255,255,255,.2);
+}
+.drop-zone{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+.profile-popover{
+  background:linear-gradient(150deg,rgba(255,255,255,.1),rgba(255,255,255,.04));
+  backdrop-filter:blur(30px) saturate(170%);
+  -webkit-backdrop-filter:blur(30px) saturate(170%);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 20px 50px rgba(3,5,20,.55);
+}
+.profile-popover button:hover{background:rgba(255,255,255,.09)}
+
+dialog{
+  background:linear-gradient(150deg,rgba(38,42,72,.82),rgba(22,25,48,.86));
+  backdrop-filter:blur(34px) saturate(165%);
+  -webkit-backdrop-filter:blur(34px) saturate(165%);
+  border:1px solid rgba(255,255,255,.17);
+  border-radius:22px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 30px 80px rgba(2,4,16,.65);
+}
+dialog::backdrop{background:rgba(5,9,25,.6);backdrop-filter:blur(10px)}
+
+.toast{
+  background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.07));
+  backdrop-filter:blur(26px) saturate(170%);
+  -webkit-backdrop-filter:blur(26px) saturate(170%);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 18px 44px rgba(3,5,20,.5);
+  color:#fff;
+}
+
+/* ---- small parts -------------------------------------------------------- */
+
+.pill,.status,.counter,.chips button,.mentions button{
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+button:not(.primary):not(nav button){
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+  transition:background .18s ease,border-color .18s ease;
+}
+button:not(.primary):not(nav button):hover{
+  background:rgba(255,255,255,.12);
+  border-color:rgba(255,255,255,.26);
+}
+
+/* The one solid thing on the page. Glass everywhere means the primary action
+   has to stay opaque or it stops reading as the button you press. */
+.primary{
+  background:var(--grad);
+  color:#171b2d;
+  border:0;
+  box-shadow:0 8px 26px rgba(237,175,104,.28),inset 0 1px 0 rgba(255,255,255,.55);
+}
+.primary:hover{box-shadow:0 10px 32px rgba(237,175,104,.4),inset 0 1px 0 rgba(255,255,255,.6)}
+
+.credit-circle,.profile-button{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+
+/* ---- keep it usable ----------------------------------------------------- */
+
+/* Blur is the expensive part. Phones get less of it, and the panels get a bit
+   more fill so text stays legible when the blur is cheap. */
+@media (max-width:760px){
+  :root{--glass-blur:blur(16px) saturate(150%)}
+  .glass{border-radius:16px}
+  header{backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%)}
+  body:before{filter:blur(18px);animation:none}
+  body:after{animation:none}
+}
+
+/* Safari <18 and older Android WebViews have no backdrop-filter. Without this
+   the panels are 5% white over a dark page, which is unreadable. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .glass,.composer,.model-card,.plan{background:rgba(26,29,56,.92)}
+  header{background:rgba(16,17,42,.96)}
+  dialog{background:rgba(26,30,54,.97)}
+  .profile-popover{background:rgba(32,35,59,.97)}
+  .toast{background:rgba(41,48,71,.97)}
+  select,input[type=text],input[type=number],input[type=email],textarea{background:rgba(20,23,44,.95)}
+}
+
+/* Windows/Android scrollbars are opaque slabs by default and cut the effect. */
+*{scrollbar-color:rgba(255,255,255,.22) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:999px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
+::-webkit-scrollbar-track{background:transparent}
+</style></head>
 <body>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
 <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></symbol>
