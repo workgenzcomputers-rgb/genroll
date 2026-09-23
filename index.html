@@ -304,6 +304,34 @@ button:not(.primary):not(nav button):hover{
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:999px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
+
+/* ---- buttons that were never meant to have a box ------------------------ */
+/* The blanket button rule above paints every non-primary button. Tabs,
+   segmented controls and list rows set their own border:0 and border-radius:0,
+   so painting them produced square slabs sitting inside their own container.
+   Give those their flat shape back, and let the fill land on hover and on the
+   active one instead, with the same corner radius as the rest of the page. */
+
+.media-tabs button,.mentions button,.modes button,.filters button,
+.tools button,.ratio-options button,.drop-zone button,.profile-popover button{
+  background:none;
+  border:0;
+  box-shadow:none;
+}
+
+.filters button,.tools button,.modes button,.mentions button{border-radius:9px}
+.media-tabs button{border-radius:10px 10px 0 0;padding-left:12px;padding-right:12px}
+
+.media-tabs button:hover,.filters button:hover,.tools button:hover,
+.mentions button:hover,.profile-popover button:hover{background:rgba(255,255,255,.08)}
+
+/* .active carries a higher specificity than the reset above, so the tab's own
+   accent underline survives and now sits under a rounded tab head. */
+.media-tabs button.active{background:rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.modes button.active{background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 2px 6px rgba(0,0,0,.28)}
+.filters button.active{background:rgba(255,255,255,.12)}
+.tools button.active{background:rgba(255,255,255,.1)}
+
 ::-webkit-scrollbar-track{background:transparent}
 </style></head>
 <body>
@@ -864,7 +892,6 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       endpoint: '/bytedance/seedance-2.5/text-to-video',
       resolutions: ['720p', '480p'],
       ratios: ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'],
-      formats: ['MP4', 'MOV'],
       outputSeconds: { min: 4, max: 30, step: 1 },
       limits: [
         'Text-to-video, with audio.',
@@ -881,9 +908,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       status: 'partial',
       modes: ['generate'],
       endpoint: '/kling-video/v2.5-turbo/pro/text-to-video',
+      fixedQuality: 'Set by the model',
       limits: [
         'Text-to-video.',
-        'Duration, resolution and ratio options are not verified yet \u2014 this build sends the prompt only.'
+        'Its API reference lists duration 5 or 10 seconds and no resolution or aspect ratio setting, so quality is whatever the model returns. This build sends the prompt only.'
       ],
       source: 'https://docs.higgsfield.ai/docs/openapi.json',
       references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai/docs/openapi.json',
@@ -895,9 +923,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       status: 'partial',
       modes: ['generate'],
       endpoint: '/minimax/hailuo-2.3/standard/text-to-video',
+      fixedQuality: '768p, fixed by the model',
       limits: [
         'Text-to-video.',
-        'Duration, resolution and ratio options are not verified yet \u2014 this build sends the prompt only.'
+        'Its API reference states 768p output and duration 6 or 10 seconds, with no resolution setting. This build sends the prompt only.'
       ],
       source: 'https://docs.higgsfield.ai/docs/openapi.json',
       references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai/docs/openapi.json',
@@ -1041,6 +1070,52 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         if (!g.querySelector('.model-card')) g.remove();
       });
     };
+  }
+
+  // The page's own renderFields() emits a placeholder "Quality" select reading
+  // "Provider default" and, separately, a real "Resolution" one. There is only
+  // one quality knob on any of these endpoints, so fold Resolution into
+  // Quality, drop Format (the request always sends mp4), and where a model
+  // offers no choice at all, say so instead of showing an empty control.
+  //
+  // The values are each model's own API reference, not a wish list. Seedance
+  // 2.5 takes 480p or 720p. Kling 2.5 Turbo Pro takes no resolution parameter.
+  // Hailuo 2.3 standard is fixed at 768p. Nothing here offers a resolution the
+  // endpoint would reject, so there is no 1080p or 4K on this deployment until
+  // a model that can actually produce it is wired up.
+  if (typeof renderFields === 'function') {
+    var renderFieldsInner = renderFields;
+    renderFields = function () {
+      renderFieldsInner();
+
+      var format = q('#field-format');
+      if (format && format.closest('.field')) format.closest('.field').remove();
+
+      var quality = q('#field-quality');
+      if (!quality) return;
+      var qualityField = quality.closest('.field');
+
+      var resolution = q('#field-resolution');
+      if (resolution) {
+        // Keep #field-resolution: buildInput() reads it. Relabel it instead.
+        var field = resolution.closest('.field');
+        var label = field && field.querySelector('.field-label');
+        if (label) label.textContent = 'Quality';
+        if (qualityField) qualityField.remove();
+        return;
+      }
+
+      var model = null;
+      try { model = currentModel(); } catch (e) {}
+      if (model && model.fixedQuality) {
+        quality.innerHTML = '';
+        var only = document.createElement('option');
+        only.textContent = model.fixedQuality;
+        quality.appendChild(only);
+        quality.disabled = true;
+      }
+    };
+    try { renderFields(); } catch (e) {}
   }
 
   /* ---- generation ------------------------------------------------------- */
