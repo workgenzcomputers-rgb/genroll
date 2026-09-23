@@ -13,7 +13,9 @@
 const crypto = require('crypto');
 const L = require('./_lib');
 
-const TO = process.env.OWNER_EMAIL || '';
+// SUGGEST_TO wins, so the inbox these land in can be changed without
+// touching OWNER_EMAIL, which other things may come to rely on.
+const TO = process.env.SUGGEST_TO || process.env.OWNER_EMAIL || '';
 const MAX = 2000;
 
 function json(res, status, body) {
