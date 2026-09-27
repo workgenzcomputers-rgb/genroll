@@ -206,8 +206,13 @@ module.exports = async (req, res) => {
       return res.status(502).json({ error: 'no_request_id', message: 'The provider did not return a job id. Nothing was charged.' });
     }
 
-    // Remember who paid for this job, so a later failure can be refunded.
-    if (userId && cost > 0) {
+    // Remember whose job this is. It used to be written only when credits had
+    // been taken, which quietly broke the owner path: an owner pays nothing, so
+    // no record was kept, so /api/job had no account to file the finished video
+    // under and it disappeared on the next reload. This record is what anchors
+    // the Generations list, not only the refund, so it is written for every
+    // signed-in job. A zero cost refunds nothing — refundIfDead skips it.
+    if (userId) {
       try { await L.setJSON(`job:${requestId}`, { userId, cost }, 7 * 86400); }
       catch (err) { console.error('job_record_failed', requestId, err.message); }
     }
