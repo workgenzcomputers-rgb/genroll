@@ -1493,9 +1493,18 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       if (typeof mediaTab !== 'undefined' && mediaTab === 'generations' && GEN.length) {
         var host = q('#media-content');
         host.innerHTML = '<div class="media-grid">' + GEN.map(function (g) {
-          var body = g.type === 'video'
-            ? '<video src="' + g.url + '" muted preload="metadata"></video>'
-            : '<img src="' + g.url + '" alt="' + g.name + '" loading="lazy">';
+          // A bare <video preload="metadata"> paints nothing until something
+          // seeks it, so the tile came out as a black rectangle. The #t=0.1
+          // fragment asks for the frame a tenth of a second in, which the
+          // browser then shows as the poster.
+          var body;
+          if (g.type === 'video') {
+            body = '<video src="' + g.url + '#t=0.1" muted playsinline loop preload="metadata"></video>';
+          } else if (g.type === 'audio') {
+            body = '<div class="audio-art">\u266A</div>';
+          } else {
+            body = '<img src="' + g.url + '" alt="' + g.name + '" loading="lazy">';
+          }
           return '<article class="media-card"><a class="thumb" href="' + g.url
             + '" target="_blank" rel="noopener noreferrer">' + body
             + '</a><div class="card-name">' + g.name
@@ -1503,9 +1512,48 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         }).join('') + '</div>'
           + '<p class="note" style="margin-top:12px">Download anything you want to keep — '
           + 'the provider deletes these files after about a week.</p>';
+
+        // The still frame says a clip is there; playing on hover says what is
+        // in it. Muted and inline, so it never grabs the page's sound.
+        host.querySelectorAll('video').forEach(function (v) {
+          v.addEventListener('mouseenter', function () {
+            var p = v.play();
+            if (p && p.catch) p.catch(function () {});
+          });
+          v.addEventListener('mouseleave', function () {
+            v.pause();
+            try { v.currentTime = 0.1; } catch (e) {}
+          });
+        });
       }
     };
   }
+
+  // Generations used to live only in this variable, so a refresh emptied the
+  // tab. The server keeps the last fifty for the signed-in account, expiring
+  // with the provider's files, so the list now survives a reload and shows up
+  // on another device too.
+  async function loadGenerations() {
+    try {
+      var d = await fetch('/api/media', { cache: 'no-store' }).then(function (r) { return r.json(); });
+      if (!d || !Array.isArray(d.items) || !d.items.length) return;
+      var seen = {};
+      GEN.forEach(function (g) { seen[g.url] = true; });
+      d.items.forEach(function (it) {
+        if (!it || !it.url || seen[it.url]) return;
+        seen[it.url] = true;
+        var kind = mediaKind(it.url, null);
+        GEN.push({
+          id: 'gen-' + (it.id || it.at),
+          name: kind === 'video' ? 'Video' : (kind === 'audio' ? 'Audio' : 'Image'),
+          type: kind,
+          url: it.url
+        });
+      });
+      if (typeof renderMedia === 'function') renderMedia();
+    } catch (e) {}
+  }
+  loadGenerations();
 
   /* ---- top-up ----------------------------------------------------------- */
 
