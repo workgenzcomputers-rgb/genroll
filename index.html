@@ -61,7 +61,9 @@ a,.drop-zone button,.audio-tabs .active,.allocations b,.ratio-options button[ari
 
 .profile-shell{display:flex;align-items:center;gap:12px}.credit-circle{width:54px;height:54px;border:1.5px solid #ff8a3d;border-radius:50%;background:#ff8a3d0b;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;flex-shrink:0;color:#ff8a3d;line-height:1.1}.credit-circle strong{font:600 18px/1.1 var(--sans)}.credit-circle span{font:10px/1.3 var(--mono)}.credit-circle:hover{background:#ff8a3d20}.credit-circle:focus-visible{outline:2px solid #ff8a3d;outline-offset:3px}.credit-circle[data-owner]{width:auto;border-radius:999px;padding:0 16px;flex-direction:row}.credit-circle[data-owner] strong{font:600 11px/1.1 var(--mono);letter-spacing:.14em}.credit-circle[data-owner] span{display:none}
 
-.source-field{display:flex;flex-direction:column;gap:6px}.source-field input[type=file]{font:11px var(--mono);color:var(--text);padding:10px;border:1px dashed var(--line);border-radius:8px;background:#ff8a3d08;cursor:pointer;width:100%;min-width:0}.source-state{font:11px/1.5 var(--mono);color:var(--muted);min-height:16px;word-break:break-word}.source-state.ok{color:var(--orange)}.source-state.bad{color:#ff6b6b}@media(max-width:560px){.profile-shell{gap:8px}.credit-circle{width:44px;height:44px}.credit-circle strong{font-size:16px}.credit-circle span{font-size:9px}}
+.source-field{display:flex;flex-direction:column;gap:6px}.source-field input[type=file]{font:11px var(--mono);color:var(--text);padding:10px;border:1px dashed var(--line);border-radius:8px;background:#ff8a3d08;cursor:pointer;width:100%;min-width:0}.source-state{font:11px/1.5 var(--mono);color:var(--muted);min-height:16px;word-break:break-word}.source-state.ok{color:var(--orange)}.source-state.bad{color:#ff6b6b}
+
+.media-card.pending{border-color:#ff8a3d55;background:#ff8a3d08}.pending-thumb{aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;text-align:center;background:repeating-linear-gradient(115deg,#ff8a3d12 0 13px,#ff8a3d05 13px 26px)}.pending-thumb strong{font-size:13px;color:var(--orange)}.pending-thumb small{font:10px/1.45 var(--mono);color:var(--muted)}.pending-spin{width:22px;height:22px;border-radius:50%;border:2px solid #ff8a3d33;border-top-color:var(--orange);animation:pending-turn .9s linear infinite}@keyframes pending-turn{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.pending-spin{animation:none}}@media(max-width:560px){.profile-shell{gap:8px}.credit-circle{width:44px;height:44px}.credit-circle strong{font-size:16px}.credit-circle span{font-size:9px}}
 </style>
 <style id="glass-skin">/* ===========================================================================
    Genroll Studio — glass skin
@@ -918,6 +920,11 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   // words. The uploaded links live here between the picker and the request.
   var SOURCES = { video: null, images: [] };
 
+  // The job that is running right now, if any. It gets a tile of its own at
+  // the head of the Generations grid so the wait has somewhere to live.
+  var PENDING = null;
+  var pendingTimer = null;
+
   var LIVE_MODELS = {
     image: [{
       id: 'recraft-4-1',
@@ -1756,6 +1763,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     var btn = q('#generate');
     btn.disabled = true;
     genStatus('Starting…');
+    startPending(model);
 
     try {
       var r = await fetch('/api/generate', {
@@ -1772,9 +1780,14 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       genStatus('');
       toast(err.message);
     } finally {
+      // A job that failed, timed out or never started still leaves a tile
+      // spinning, so clear it here rather than in each branch above. Its
+      // duration is not recorded: it would not be a generation time.
+      if (PENDING) endPending(false);
       btn.disabled = !CFG.generation.enabled;
       if (window.__GENROLL_REFRESH_ME) window.__GENROLL_REFRESH_ME();
       readBalance();
+      try { paintCost(); } catch (e) {}
     }
   }
 
@@ -1797,6 +1810,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
       if (d.status === 'completed') {
         if (!d.url) throw new Error('The job finished but returned no media.');
+        endPending(true);
         addGenerated(d.url, model);
         genStatus('Done.');
         toast('Your ' + mediaKind(d.url, model) + ' is ready.');
@@ -1860,6 +1874,88 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     dlg.showModal();
   }
 
+  // How long this model usually takes, measured from this browser's own runs
+  // rather than a figure nobody checked. The provider publishes no timings, so
+  // until there are two runs to compare the tile counts up and says as much
+  // instead of inventing a number.
+  var TIMES_KEY = 'genroll.durations.v1';
+
+  function readTimes() {
+    try { return JSON.parse(localStorage.getItem(TIMES_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+
+  function noteDuration(modelId, seconds) {
+    if (!modelId || !(seconds > 0)) return;
+    try {
+      var all = readTimes();
+      var list = all[modelId] || [];
+      list.push(Math.round(seconds));
+      all[modelId] = list.slice(-5);
+      localStorage.setItem(TIMES_KEY, JSON.stringify(all));
+    } catch (e) {}
+  }
+
+  function typicalSeconds(modelId) {
+    var list = readTimes()[modelId] || [];
+    if (list.length < 2) return null;
+    var sorted = list.slice().sort(function (a, b) { return a - b; });
+    return sorted[Math.floor(sorted.length / 2)];
+  }
+
+  function clock(seconds) {
+    var s = Math.max(0, Math.round(seconds));
+    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  function pendingCard() {
+    if (!PENDING) return '';
+    return '<article class="media-card pending">'
+      + '<div class="pending-thumb"><span class="pending-spin" aria-hidden="true"></span>'
+      + '<strong>Generating\u2026</strong>'
+      + '<small id="pending-eta" role="status" aria-live="polite">Starting\u2026</small></div>'
+      + '<div class="card-name">' + PENDING.name
+      + '<br><small>This tile becomes the clip when it lands.</small></div></article>';
+  }
+
+  function paintPending() {
+    var eta = document.getElementById('pending-eta');
+    if (!PENDING || !eta) return;
+    var elapsed = (Date.now() - PENDING.started) / 1000;
+    if (!PENDING.typical) {
+      eta.textContent = clock(elapsed) + ' \u00B7 first run on this model, timing it';
+    } else if (elapsed < PENDING.typical) {
+      eta.textContent = clock(elapsed) + ' \u00B7 about ' + clock(PENDING.typical - elapsed) + ' to go';
+    } else {
+      eta.textContent = clock(elapsed) + ' \u00B7 longer than usual, still going';
+    }
+  }
+
+  function startPending(model) {
+    PENDING = {
+      name: (model && model.name) || 'Generating',
+      modelId: model && model.id,
+      started: Date.now(),
+      typical: typicalSeconds(model && model.id)
+    };
+    clearInterval(pendingTimer);
+    pendingTimer = setInterval(paintPending, 1000);
+    // Put the visitor where the tile is, so the wait is visible rather than
+    // announced on a line beside the button they just pressed.
+    var tab = document.querySelector('[data-media="generations"]');
+    if (tab) tab.click();
+    else if (typeof renderMedia === 'function') renderMedia();
+    paintPending();
+  }
+
+  function endPending(finished) {
+    if (PENDING && finished) noteDuration(PENDING.modelId, (Date.now() - PENDING.started) / 1000);
+    PENDING = null;
+    clearInterval(pendingTimer);
+    pendingTimer = null;
+    if (typeof renderMedia === 'function') renderMedia();
+  }
+
   function addGenerated(url, model) {
     GEN.unshift({
       id: 'gen-' + Date.now(),
@@ -1880,9 +1976,9 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     var inner = renderMedia;
     renderMedia = function () {
       inner();
-      if (typeof mediaTab !== 'undefined' && mediaTab === 'generations' && GEN.length) {
+      if (typeof mediaTab !== 'undefined' && mediaTab === 'generations' && (GEN.length || PENDING)) {
         var host = q('#media-content');
-        host.innerHTML = '<div class="media-grid">' + GEN.map(function (g) {
+        host.innerHTML = '<div class="media-grid">' + pendingCard() + GEN.map(function (g) {
           // A bare <video preload="metadata"> paints nothing until something
           // seeks it, so the tile came out as a black rectangle. The #t=0.1
           // fragment asks for the frame a tenth of a second in, which the
@@ -1900,8 +1996,8 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
             + '</a><div class="card-name">' + g.name
             + '<br><small>Provider link · expires in about 7 days</small></div></article>';
         }).join('') + '</div>'
-          + '<p class="note" style="margin-top:12px">Download anything you want to keep — '
-          + 'the provider deletes these files after about a week.</p>';
+          + (GEN.length ? '<p class="note" style="margin-top:12px">Download anything you want to keep — '
+            + 'the provider deletes these files after about a week.</p>' : '');
 
         // The still frame says a clip is there; playing on hover says what is
         // in it. Muted and inline, so it never grabs the page's sound.
@@ -1916,8 +2012,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
           });
         });
 
-        // Cards are rendered straight from GEN, so position maps to entry.
-        host.querySelectorAll('.media-card').forEach(function (card, i) {
+        // Cards are rendered straight from GEN, so position maps to entry —
+        // except the running job's tile, which stands in front of all of them
+        // and belongs to no entry at all.
+        host.querySelectorAll('.media-card:not(.pending)').forEach(function (card, i) {
           var g = GEN[i];
           var link = card.querySelector('.thumb');
           if (!g || !link) return;
