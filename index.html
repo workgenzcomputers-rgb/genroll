@@ -59,7 +59,9 @@ a,.drop-zone button,.audio-tabs .active,.allocations b,.ratio-options button[ari
 
 .duration-control{padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#ff8a3d06}.duration-control label{display:flex;justify-content:space-between;gap:12px}.duration-control output{color:#ff8a3d;font-size:14px}.duration-control input{width:100%;accent-color:#ff8a3d;cursor:pointer;min-height:30px}
 
-.profile-shell{display:flex;align-items:center;gap:12px}.credit-circle{width:54px;height:54px;border:1.5px solid #ff8a3d;border-radius:50%;background:#ff8a3d0b;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;flex-shrink:0;color:#ff8a3d;line-height:1.1}.credit-circle strong{font:600 18px/1.1 var(--sans)}.credit-circle span{font:10px/1.3 var(--mono)}.credit-circle:hover{background:#ff8a3d20}.credit-circle:focus-visible{outline:2px solid #ff8a3d;outline-offset:3px}@media(max-width:560px){.profile-shell{gap:8px}.credit-circle{width:44px;height:44px}.credit-circle strong{font-size:16px}.credit-circle span{font-size:9px}}
+.profile-shell{display:flex;align-items:center;gap:12px}.credit-circle{width:54px;height:54px;border:1.5px solid #ff8a3d;border-radius:50%;background:#ff8a3d0b;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;flex-shrink:0;color:#ff8a3d;line-height:1.1}.credit-circle strong{font:600 18px/1.1 var(--sans)}.credit-circle span{font:10px/1.3 var(--mono)}.credit-circle:hover{background:#ff8a3d20}.credit-circle:focus-visible{outline:2px solid #ff8a3d;outline-offset:3px}.credit-circle[data-owner]{width:auto;border-radius:999px;padding:0 16px;flex-direction:row}.credit-circle[data-owner] strong{font:600 11px/1.1 var(--mono);letter-spacing:.14em}.credit-circle[data-owner] span{display:none}
+
+.source-field{display:flex;flex-direction:column;gap:6px}.source-field input[type=file]{font:11px var(--mono);color:var(--text);padding:10px;border:1px dashed var(--line);border-radius:8px;background:#ff8a3d08;cursor:pointer;width:100%;min-width:0}.source-state{font:11px/1.5 var(--mono);color:var(--muted);min-height:16px;word-break:break-word}.source-state.ok{color:var(--orange)}.source-state.bad{color:#ff6b6b}@media(max-width:560px){.profile-shell{gap:8px}.credit-circle{width:44px;height:44px}.credit-circle strong{font-size:16px}.credit-circle span{font-size:9px}}
 </style>
 <style id="glass-skin">/* ===========================================================================
    Genroll Studio — glass skin
@@ -912,6 +914,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
      partial because they have not been verified against a live account. */
   var DOC = 'https://open.higgsfield.ai/models';
 
+  // Motion transfer is the one model here that takes files rather than only
+  // words. The uploaded links live here between the picker and the request.
+  var SOURCES = { video: null, images: [] };
+
   var LIVE_MODELS = {
     image: [{
       id: 'recraft-4-1',
@@ -1056,6 +1062,25 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       source: DOC + '/higgsfield/cinema-studio/4.0/api-reference',
       references: { image: 1, unverified: true, source: DOC + '/higgsfield/cinema-studio/4.0/api-reference',
         checked: '2026-09-27', note: 'Endpoint confirmed against the live key. Options undocumented.' }
+
+    }, {
+      id: 'genjutsu-motion',
+      name: 'Genjutsu Motion Transfer',
+      provider: 'Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/higgsfield/genjutsu/motion-transfer/v1.0',
+      resolutions: ['720p'],
+      send: { resolution: true, sources: true },
+      limits: [
+        'Copies the movement out of a video and puts it on the images you upload.',
+        'The output runs as long as the source clip does, so there is no duration to set.',
+        'One resolution, 720p. A written prompt is optional on this model.',
+        'Uploads are stored to give the provider a link to fetch, and are deleted after seven days.'
+      ],
+      source: DOC + '/higgsfield/genjutsu/motion-transfer/v1.0/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/higgsfield/genjutsu/motion-transfer/v1.0/api-reference',
+        checked: '2026-09-27', note: 'Listed in the reference. Unlike the others it was not in the endpoint probe, so it is unconfirmed against the live key.' }
 
     }]
   };
@@ -1246,13 +1271,143 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       }
     }
 
+
+    // Motion transfer needs real files: a clip whose movement is copied and
+    // the stills to move. The provider fetches them over the network, so each
+    // file goes to this site's own storage first and the link that comes back
+    // is what the request carries. The uploader is a separate module loaded
+    // the first time it is needed, so nobody downloads it on a normal visit.
+    var loading = null;
+    function uploader() {
+      if (!loading) {
+        loading = import('/vendor/blob-client.mjs').catch(function (err) {
+          loading = null;
+          console.error('uploader_unavailable', err);
+          throw new Error('The uploader could not be downloaded. Check the connection and pick the file again.');
+        });
+      }
+      return loading;
+    }
+
+    function say(state, text, kind) {
+      state.textContent = text;
+      state.className = 'source-state' + (kind ? ' ' + kind : '');
+    }
+
+    async function sendOne(file, state, index, total) {
+      var client = await uploader();
+      var of = total > 1 ? ' (' + index + ' of ' + total + ')' : '';
+      say(state, 'Uploading ' + file.name + of);
+      var blob = await client.upload('ref/' + file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        onUploadProgress: function (p) {
+          say(state, 'Uploading ' + file.name + of + ' \u2014 ' + Math.round(p.percentage) + '%');
+        }
+      });
+      return blob.url;
+    }
+
+    // Files upload as soon as they are chosen rather than on Generate, so the
+    // wait happens while the prompt is still being written.
+    function wire(input, state, many) {
+      input.onchange = async function () {
+        var files = Array.prototype.slice.call(input.files || []);
+        if (many) SOURCES.images = []; else SOURCES.video = null;
+
+        if (!files.length) { say(state, 'Nothing chosen yet.'); return; }
+        if (many && files.length > 4) {
+          say(state, 'Four images at most.', 'bad');
+          input.value = '';
+          return;
+        }
+
+        input.disabled = true;
+        try {
+          var urls = [];
+          for (var i = 0; i < files.length; i++) {
+            urls.push(await sendOne(files[i], state, i + 1, files.length));
+          }
+          if (many) {
+            SOURCES.images = urls;
+            say(state, urls.length === 1 ? 'One image ready.' : urls.length + ' images ready.', 'ok');
+          } else {
+            SOURCES.video = urls[0];
+            say(state, 'Video ready.', 'ok');
+          }
+        } catch (err) {
+          if (many) SOURCES.images = []; else SOURCES.video = null;
+          say(state, err.message || 'That upload did not go through.', 'bad');
+          input.value = '';
+        } finally {
+          input.disabled = false;
+        }
+      };
+    }
+
+    function sourceBlock(id, text, accept, many) {
+      var wrap = document.createElement('div');
+      wrap.className = 'field wide source-field';
+      wrap.id = id + '-field';
+
+      var label = document.createElement('label');
+      label.className = 'field-label';
+      label.setAttribute('for', id);
+      label.textContent = text;
+
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.id = id;
+      input.accept = accept;
+      if (many) input.multiple = true;
+
+      var state = document.createElement('div');
+      state.className = 'source-state';
+      state.textContent = 'Nothing chosen yet.';
+
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      wrap.appendChild(state);
+      wire(input, state, many);
+      return wrap;
+    }
+
+    // Adding the fields changes #model-fields, which wakes the observer again,
+    // so this has to be a no-op the second time round.
+    function syncSources() {
+      var model = null;
+      try { model = currentModel(); } catch (e) {}
+      var wants = Boolean(model && model.send && model.send.sources);
+      var already = document.getElementById('src-video-field');
+
+      if (!wants) {
+        if (already) {
+          already.remove();
+          var images = document.getElementById('src-images-field');
+          if (images) images.remove();
+          SOURCES.video = null;
+          SOURCES.images = [];
+        }
+        return;
+      }
+      if (already) return;
+
+      // A new model means the old uploads no longer describe what is on screen.
+      SOURCES.video = null;
+      SOURCES.images = [];
+      box.appendChild(sourceBlock('src-video', 'Motion video (mp4, mov or webm)', 'video/mp4,video/quicktime,video/webm', false));
+      box.appendChild(sourceBlock('src-images', 'Images to move (jpg, png or webp)', 'image/jpeg,image/png,image/webp', true));
+    }
+
     // Each step is a no-op once it has been done, so the mutations this makes
     // settle on the next pass instead of feeding back into the observer.
     new MutationObserver(function () {
       fixFields();
+      try { syncSources(); } catch (e) {}
       try { paintCost(); } catch (e) {}
     }).observe(box, { childList: true });
     try { fixFields(); } catch (e) {}
+    try { syncSources(); } catch (e) {}
   })();
 
   // On every other site the wordmark is the way back to the start, so make it
@@ -1535,6 +1690,11 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       input.aspect_ratio = model.ratios.indexOf(ratio) > -1 ? ratio : model.ratios[0];
     }
 
+    if (send.sources) {
+      if (SOURCES.video) input.video_url = SOURCES.video;
+      if (SOURCES.images.length) input.image_urls = SOURCES.images.slice();
+    }
+
     if (send.extra) {
       for (var key in send.extra) {
         if (Object.prototype.hasOwnProperty.call(send.extra, key)) input[key] = send.extra[key];
@@ -1557,7 +1717,14 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
     var promptEl = q('#prompt');
     var prompt = promptEl.value.trim();
-    if (!prompt) { toast('Write a prompt first.'); promptEl.focus(); return; }
+
+    // Motion transfer works from the clip and the stills, so it is the one
+    // model that can run with the prompt box empty \u2014 but it cannot run
+    // until both uploads have finished.
+    var needsSources = Boolean(model && model.send && model.send.sources);
+    if (!prompt && !needsSources) { toast('Write a prompt first.'); promptEl.focus(); return; }
+    if (needsSources && !SOURCES.video) { toast('Choose the motion video first.'); return; }
+    if (needsSources && !SOURCES.images.length) { toast('Choose at least one image to move.'); return; }
 
     var btn = q('#generate');
     btn.disabled = true;
@@ -1894,14 +2061,23 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   }
 
   function paint() {
+    // An owner account generates straight against the provider key, so there
+    // is no balance to spend and a number here would describe a charge that
+    // never happens.
+    var owner = Boolean(ME.signedIn && ME.owner);
+
     var balance = q('#credit-balance');
-    if (balance && ME.signedIn) balance.textContent = Number(ME.credits || 0);
+    if (balance && ME.signedIn) balance.textContent = owner ? 'DEVELOPER MODE' : Number(ME.credits || 0);
 
     var circle = q('.credit-circle');
     if (circle) {
-      circle.setAttribute('aria-label', ME.signedIn
-        ? 'Available credits: ' + (ME.credits || 0) + '. Add credits'
-        : 'Sign in to see your credits');
+      if (owner) circle.setAttribute('data-owner', '1');
+      else circle.removeAttribute('data-owner');
+      circle.setAttribute('aria-label', owner
+        ? 'Developer mode. Generations do not use credits.'
+        : (ME.signedIn
+          ? 'Available credits: ' + (ME.credits || 0) + '. Add credits'
+          : 'Sign in to see your credits'));
     }
 
     // The profile popover is where an account belongs. Give it a real row:

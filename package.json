@@ -1,0 +1,8 @@
+{
+  "name": "genroll",
+  "private": true,
+  "description": "Genroll Studio. The page is static and api/ holds the serverless functions. The one dependency is the Blob SDK, which the upload route needs to issue client upload tokens and to clear out old reference files.",
+  "dependencies": {
+    "@vercel/blob": "^2.8.0"
+  }
+}
