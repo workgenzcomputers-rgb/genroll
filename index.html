@@ -1421,6 +1421,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       toast(err.message);
     } finally {
       btn.disabled = !CFG.generation.enabled;
+      if (window.__GENROLL_REFRESH_ME) window.__GENROLL_REFRESH_ME();
     }
   }
 
@@ -1445,7 +1446,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         if (!d.url) throw new Error('The job finished but returned no media.');
         addGenerated(d.url, model);
         genStatus('Done.');
-        toast('Your ' + (model.id === 'higgsfield-dop' ? 'video' : 'image') + ' is ready.');
+        toast('Your ' + mediaKind(d.url, model) + ' is ready.');
         return;
       }
       if (d.status === 'nsfw') throw new Error('The provider blocked this prompt as unsafe.');
@@ -1455,13 +1456,30 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     throw new Error('This job is taking longer than five minutes. It may still finish — try again shortly.');
   }
 
+  // What kind of media came back. This used to read
+  //   model.id === DoP ? video : image
+  // which was true when DoP was the only video model on the page. Every video
+  // model added since — Seedance, Kling, Hailuo — fell through to 'image', so
+  // a finished clip was rendered into an <img> and showed as a broken tile.
+  // Trust the file first, and fall back to which catalog the model sits in.
+  function mediaKind(url, model) {
+    if (/\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)) return 'video';
+    if (/\.(mp3|wav|m4a|ogg)(\?|$)/i.test(url)) return 'audio';
+    if (/\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url)) return 'image';
+    var id = model && model.id;
+    return (LIVE_MODELS.video || []).some(function (m) { return m.id === id; }) ? 'video' : 'image';
+  }
+
   function addGenerated(url, model) {
     GEN.unshift({
       id: 'gen-' + Date.now(),
       name: model.name,
-      type: model.id === 'higgsfield-dop' ? 'video' : 'image',
+      type: mediaKind(url, model),
       url: url
     });
+    // Generating spends credits, and a dead job refunds them, so the number in
+    // the header is stale either way until it is asked again.
+    if (window.__GENROLL_REFRESH_ME) window.__GENROLL_REFRESH_ME();
     var tab = document.querySelector('[data-media="generations"]');
     if (tab) tab.click(); else renderMedia();
   }
