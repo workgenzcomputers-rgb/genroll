@@ -1056,24 +1056,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       source: DOC + '/higgsfield/cinema-studio/4.0/api-reference',
       references: { image: 1, unverified: true, source: DOC + '/higgsfield/cinema-studio/4.0/api-reference',
         checked: '2026-09-27', note: 'Endpoint confirmed against the live key. Options undocumented.' }
-    }, {
-      id: 'grok-video-1-5',
-      name: 'Grok Imagine Video 1.5',
-      provider: 'xAI \u00B7 via Higgsfield',
-      status: 'partial',
-      modes: ['generate'],
-      endpoint: '/xai/grok-imagine-video/v1.5/reference-to-video',
-      resolutions: ['1080p', '720p', '480p'],
-      ratios: ['auto', '16:9', '9:16', '4:3', '3:4', '1:1', '3:2', '2:3'],
-      outputSeconds: { min: 1, max: 15, step: 1 },
-      send: { duration: true, resolution: true, aspect_ratio: true },
-      limits: [
-        'Text-to-video, 1 to 15 seconds, up to 1080p.',
-        'Named reference-to-video, but its reference marks the image inputs optional, so a prompt alone is enough.'
-      ],
-      source: DOC + '/xai/grok-imagine-video/v1.5/reference-to-video/api-reference',
-      references: { image: 1, unverified: true, source: DOC + '/xai/grok-imagine-video/v1.5/reference-to-video/api-reference',
-        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
+
     }]
   };
 
@@ -1472,6 +1455,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   // pricing table these models do not carry, which is why it read "credit
   // quote pending".
   var BALANCE = null;
+  var OWNER = false;
 
   function costFor(model) {
     var costs = (CFG && CFG.costs) || {};
@@ -1489,6 +1473,13 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     var cost = costFor(model);
     if (cost == null) return;
 
+    // The owner runs on the provider key directly, so quoting a price at
+    // them would describe a charge that never happens.
+    if (OWNER) {
+      small.textContent = 'Developer mode \u00B7 no credits used';
+      return;
+    }
+
     var line = cost + (cost === 1 ? ' credit' : ' credits');
     if (BALANCE != null) {
       line += ' \u00B7 you have ' + BALANCE;
@@ -1501,8 +1492,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     try {
       var me = await fetch('/api/auth?action=me', { cache: 'no-store' }).then(function (r) { return r.json(); });
       BALANCE = (me && me.signedIn) ? Number(me.credits || 0) : null;
+      OWNER = Boolean(me && me.signedIn && me.owner);
     } catch (e) {
       BALANCE = null;
+      OWNER = false;
     }
     paintCost();
   }
