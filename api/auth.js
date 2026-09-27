@@ -75,7 +75,11 @@ module.exports = async (req, res) => {
       if (!user) return json(res, 200, { signedIn: false, available: true });
       return json(res, 200, {
         signedIn: true, available: true,
-        email: user.email, credits: await L.balanceOf(id)
+        email: user.email, credits: await L.balanceOf(id),
+        // Lets the page say "developer mode" instead of quoting a price. The
+        // page is only being told; the exemption itself is decided server-side
+        // on every generate call.
+        owner: L.isOwner(user.email)
       });
     } catch {
       return json(res, 503, { signedIn: false, available: false, error: 'store_error' });

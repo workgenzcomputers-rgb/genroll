@@ -38,7 +38,6 @@ const COST = {
   '/minimax/h3/text-to-video': VIDEO,
   '/alibaba/wan-3.0-prime/text-to-video': VIDEO,
   '/higgsfield/cinema-studio/4.0': VIDEO,
-  '/xai/grok-imagine-video/v1.5/reference-to-video': VIDEO,
   '/recraft/v4.1/text-to-image': IMAGE,
   '/alibaba/qwen-image-3/text-to-image': IMAGE,
   '/xai/grok-imagine-image-2.0': IMAGE
@@ -92,7 +91,8 @@ module.exports = async (req, res) => {
   // Once the ledger exists, generating costs money, so it needs a signed-in
   // account to bill. Before that it stays open, exactly as it was.
   let userId = null;
-  const cost = COST[path] || 0;
+  let cost = COST[path] || 0;
+  let owner = false;
   if (L.authReady) {
     userId = L.currentUserId(req);
     if (!userId) {
@@ -100,6 +100,17 @@ module.exports = async (req, res) => {
         error: 'sign_in_required',
         message: 'Sign in to generate. Each generation uses credits from your balance.'
       });
+    }
+
+    // Owner accounts run straight against the provider key with no credits
+    // taken. The check is on the email attached to the session this server
+    // issued, never on anything in the request, so it cannot be claimed.
+    try {
+      const who = await L.getUser(userId);
+      if (who && L.isOwner(who.email)) { owner = true; cost = 0; }
+    } catch (err) {
+      // If the lookup fails, fall through as an ordinary account and charge.
+      console.error('owner_lookup_failed', err.message);
     }
   }
 

@@ -170,8 +170,25 @@ async function refundCredits(userId, amount) {
   return Number(balance);
 }
 
+// Accounts that generate on the owner's own provider key without touching the
+// credit ledger. Credits are this site's internal accounting for customers;
+// the owner already pays the provider directly, so charging them their own
+// currency would just move a number around.
+//
+// The list comes from the environment and is compared against the email on the
+// server-verified session. Nothing the browser sends is consulted, so a
+// visitor cannot claim to be the owner.
+const OWNERS = String(process.env.OWNER_EMAILS || '')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+function isOwner(email) {
+  if (!email || !OWNERS.length) return false;
+  return OWNERS.indexOf(String(email).trim().toLowerCase()) > -1;
+}
+
 module.exports = {
   storeReady,
+  isOwner,
   authReady: Boolean(SESSION_SECRET && storeReady),
   googleReady: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   emailReady: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM),
