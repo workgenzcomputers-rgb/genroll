@@ -1518,29 +1518,56 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   // /api/suggest mails it over with Reply-To set to the sender, so the owner
   // answers from their own inbox.
   (function () {
-    var hero = document.querySelector('#page-studio .hero');
-    if (!hero || document.getElementById('suggest-box')) return;
+    var shell = document.querySelector('.profile-shell');
+    if (!shell || document.getElementById('suggest-box')) return;
 
-    var box = document.createElement('section');
+    // This used to sit under the hero, asking for a suggestion before anyone
+    // had used the place long enough to have one. It lives behind an icon in
+    // the header now: there when somebody wants it, out of the way when not.
+    var box = document.createElement('dialog');
     box.id = 'suggest-box';
-    box.className = 'glass';
-    box.style.cssText = 'padding:18px 20px;margin-top:18px';
+    box.setAttribute('aria-label', 'Tell us what to build next');
+    box.style.cssText = 'width:min(560px,92vw)';
     box.innerHTML =
       '<div class="row between" style="align-items:baseline;gap:12px;flex-wrap:wrap">'
       + '<h3 style="margin:0;font-size:16px">Tell us what to build next</h3>'
-      + '<span class="note" style="margin:0">Every one is read, and answered by email.</span>'
+      + '<button type="button" id="suggest-close" aria-label="Close">\u2715</button>'
       + '</div>'
-      + '<div style="display:grid;gap:10px;margin-top:12px">'
+      + '<p class="note" style="margin:6px 0 0">Every one is read, and answered by email.</p>'
+      + '<div style="display:grid;gap:10px;margin-top:14px">'
       + '<label class="field" for="suggest-email" style="margin:0"><span class="field-label">Your email</span>'
       + '<input id="suggest-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"></label>'
       + '<label class="field" for="suggest-text" style="margin:0"><span class="field-label">Your suggestion</span>'
-      + '<textarea id="suggest-text" rows="3" maxlength="2000" placeholder="A model you want, something that got in your way, anything."></textarea></label>'
+      + '<textarea id="suggest-text" rows="4" maxlength="2000" placeholder="A model you want, something that got in your way, anything."></textarea></label>'
       + '<input type="text" id="suggest-website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">'
       + '<div class="row between" style="gap:12px;flex-wrap:wrap">'
       + '<p class="note" id="suggest-note" role="status" aria-live="polite" style="margin:0;flex:1 1 220px"></p>'
       + '<button type="button" id="suggest-send">Send</button>'
       + '</div></div>';
-    hero.insertAdjacentElement('afterend', box);
+    document.body.appendChild(box);
+
+    var open = document.createElement('button');
+    open.type = 'button';
+    open.id = 'suggest-open';
+    open.className = 'profile-button';
+    open.setAttribute('aria-label', 'Tell us what to build next');
+    open.title = 'Tell us what to build next';
+    open.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+      + '<path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.4V16.5H4A1.5 1.5 0 0 1 2.5 15V7A1.5 1.5 0 0 1 4 5.5Z"/>'
+      + '<path d="M7 9.6h10M7 12.6h6"/>'
+      + '</svg>';
+    shell.insertBefore(open, document.getElementById('return-credits'));
+
+    open.onclick = function () {
+      // A second suggestion should be as easy as the first, so undo whatever
+      // the last send left behind before the form comes back.
+      var send = document.getElementById('suggest-send');
+      if (send.textContent === 'Sent') { send.textContent = 'Send'; send.disabled = false; }
+      document.getElementById('suggest-note').textContent = '';
+      box.showModal();
+      document.getElementById('suggest-text').focus();
+    };
+    document.getElementById('suggest-close').onclick = function () { box.close(); };
 
     // Save people retyping an address the session already knows.
     fetch('/api/auth?action=me', { cache: 'no-store' })
