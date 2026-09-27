@@ -37,7 +37,12 @@ const CANDIDATES = [
   '/alibaba/qwen-image-3/text-to-image',
   '/xai/grok-imagine-image-2.0',
   '/z-image/turbo',
-  '/marketing-studio/image'
+  '/marketing-studio/image',
+  // Controls. These do not exist. If they answer 405 like everything else,
+  // then 405 is just what this host says to any unmatched path, and a 405
+  // above proves nothing. Worth knowing before trusting a single result.
+  '/bytedance/seedance-9.9/text-to-video',
+  '/definitely/not/a/real/model-xyz'
 ];
 
 function credentials() {
