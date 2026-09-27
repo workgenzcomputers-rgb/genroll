@@ -1737,6 +1737,71 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     return input;
   }
 
+  // A job outlives the tab that started it. The provider keeps the file for
+  // about a week, but this page only files it under the account when a poll
+  // sees it finish — so a reload, a closed laptop or a deadline reached one
+  // beat too early used to lose a finished video for good. The id is kept
+  // here and picked up again on the next visit.
+  var PENDING_KEY = 'genroll.pending.v1';
+
+  function readPendingJobs() {
+    try {
+      var list = JSON.parse(localStorage.getItem(PENDING_KEY)) || [];
+      return list.filter(function (j) { return j && j.id && (Date.now() - j.at) < 24 * 3600 * 1000; });
+    } catch (e) { return []; }
+  }
+
+  function writePendingJobs(list) {
+    try { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+
+  function rememberPending(id, model) {
+    var list = readPendingJobs().filter(function (j) { return j.id !== id; });
+    list.push({ id: id, modelId: model && model.id, at: Date.now() });
+    writePendingJobs(list);
+  }
+
+  function forgetPending(id) {
+    writePendingJobs(readPendingJobs().filter(function (j) { return j.id !== id; }));
+  }
+
+  function modelById(id) {
+    var all = (LIVE_MODELS.video || []).concat(LIVE_MODELS.image || []);
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+
+  // Finish quietly what an earlier visit started: no toast and no tab switch,
+  // the clip just appears in Generations where it belongs. Asking /api/job is
+  // also what makes the server file it against the account, so this doubles as
+  // the repair for a job whose browser walked away.
+  async function resumePendingJobs() {
+    var list = readPendingJobs();
+    for (var i = 0; i < list.length; i++) {
+      var job = list[i];
+      try {
+        var r = await fetch('/api/job?id=' + encodeURIComponent(job.id), { cache: 'no-store' });
+        var d = await r.json();
+        if (!r.ok) continue;
+        if (d.status === 'completed' && d.url) {
+          forgetPending(job.id);
+          if (!GEN.some(function (g) { return g.url === d.url; })) {
+            var model = modelById(job.modelId);
+            GEN.unshift({
+              id: 'gen-' + job.id,
+              name: (model && model.name) || 'Video',
+              type: mediaKind(d.url, model),
+              url: d.url
+            });
+            if (typeof renderMedia === 'function') renderMedia();
+          }
+        } else if (d.terminal) {
+          forgetPending(job.id);
+        }
+      } catch (e) {}
+    }
+  }
+
   async function startGeneration() {
     var model, path;
     try { model = currentModel(); } catch (e) { model = null; }
@@ -1774,6 +1839,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       var d = await r.json().catch(function () { return {}; });
       if (!r.ok) throw new Error(d.message || d.error || ('Could not start the job (' + r.status + ').'));
       if (!d.requestId) throw new Error('The provider did not return a job id.');
+      rememberPending(d.requestId, model);
       genStatus('Queued…');
       await poll(d.requestId, model);
     } catch (err) {
@@ -1794,7 +1860,12 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   async function poll(id, model) {
-    var deadline = Date.now() + 5 * 60 * 1000;   // give up after five minutes
+    // Five minutes was not enough: the first Genjutsu clip finished five
+    // minutes and twenty-eight seconds in, so the page gave up twenty-eight
+    // seconds before its own video arrived. Motion transfer runs in minutes,
+    // not seconds. Giving up here no longer loses anything either — the id
+    // stays in rememberPending() and the next visit collects the result.
+    var deadline = Date.now() + 20 * 60 * 1000;
     clearTimeout(polling);
     while (Date.now() < deadline) {
       await sleep(3000);
@@ -1809,6 +1880,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       if (!r.ok) throw new Error(d.message || 'Could not read the job status.');
 
       if (d.status === 'completed') {
+        forgetPending(id);
         if (!d.url) throw new Error('The job finished but returned no media.');
         endPending(true);
         addGenerated(d.url, model);
@@ -1816,11 +1888,11 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         toast('Your ' + mediaKind(d.url, model) + ' is ready.');
         return;
       }
-      if (d.status === 'nsfw') throw new Error('The provider blocked this prompt as unsafe.');
-      if (d.status === 'failed') throw new Error('The provider could not finish this job.');
+      if (d.status === 'nsfw') { forgetPending(id); throw new Error('The provider blocked this prompt as unsafe.'); }
+      if (d.status === 'failed') { forgetPending(id); throw new Error('The provider could not finish this job.'); }
       genStatus(d.status === 'in_progress' ? 'Generating…' : 'Queued…');
     }
-    throw new Error('This job is taking longer than five minutes. It may still finish — try again shortly.');
+    throw new Error('This job has run for twenty minutes. It is still with the provider — leave the page open or come back later and it will appear in Generations on its own.');
   }
 
   // What kind of media came back. This used to read
@@ -2054,7 +2126,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       if (typeof renderMedia === 'function') renderMedia();
     } catch (e) {}
   }
-  loadGenerations();
+  loadGenerations().then(resumePendingJobs);
   readBalance();
 
   /* ---- top-up ----------------------------------------------------------- */
