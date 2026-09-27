@@ -42,19 +42,35 @@ function credentials() {
 }
 
 // Pull the first usable media URL out of whatever shape comes back.
+//
+// The old version only knew the SDK's jobs[].results.raw.url shape and missed
+// the one Seedance actually returns, where the file arrives in a "video"
+// field, so a finished job reported completed with no URL. Rather than chase
+// each model's shape, walk the payload: try the fields that normally carry
+// media first, then anything else, and prefer a link that looks like a file
+// over one that merely looks like a URL.
 function firstUrl(data) {
-  if (!data || typeof data !== 'object') return null;
-  const jobs = data.jobs || data.results || [];
-  if (Array.isArray(jobs)) {
-    for (const j of jobs) {
-      const u = j && j.results && j.results.raw && j.results.raw.url;
-      if (u) return u;
-      if (j && j.url) return j.url;
+  const seen = new Set();
+  const found = [];
+  const PREFERRED = ['url', 'video', 'image', 'audio', 'file', 'output', 'result', 'raw', 'jobs', 'results'];
+
+  const walk = (node, depth) => {
+    if (node == null || depth > 8 || found.length > 40) return;
+    if (typeof node === 'string') {
+      if (/^https?:\/\//i.test(node)) found.push(node);
+      return;
     }
-  }
-  if (data.results && data.results.raw && data.results.raw.url) return data.results.raw.url;
-  if (typeof data.url === 'string') return data.url;
-  return null;
+    if (typeof node !== 'object') return;
+    if (seen.has(node)) return;
+    seen.add(node);
+    if (Array.isArray(node)) { for (const v of node) walk(v, depth + 1); return; }
+    for (const key of PREFERRED) if (key in node) walk(node[key], depth + 1);
+    for (const key of Object.keys(node)) if (!PREFERRED.includes(key)) walk(node[key], depth + 1);
+  };
+  walk(data, 0);
+
+  const isMedia = u => /\.(mp4|mov|webm|m4v|gif|png|jpe?g|webp|mp3|wav|m4a)(\?|$)/i.test(u);
+  return found.find(isMedia) || found[0] || null;
 }
 
 module.exports = async (req, res) => {
