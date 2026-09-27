@@ -68,9 +68,15 @@ module.exports = async (req, res) => {
   const results = [];
   for (const path of CANDIDATES) {
     try {
+      // GET turned out to be useless here: this host answers 405 to any path,
+      // real or invented, so every candidate "existed". POST an empty body
+      // instead. A real endpoint rejects it with a validation error naming the
+      // fields it wanted; a path that is not routed answers 404. Every model
+      // in the list requires a prompt, so an empty body cannot start a job.
       const r = await fetch(BASE + path, {
-        method: 'GET',
-        headers: { Authorization: 'Key ' + creds }
+        method: 'POST',
+        headers: { Authorization: 'Key ' + creds, 'Content-Type': 'application/json' },
+        body: '{}'
       });
       let detail = '';
       try { detail = (await r.text()).slice(0, 160); } catch (e) {}
@@ -78,9 +84,10 @@ module.exports = async (req, res) => {
         path: path,
         http: r.status,
         // 405 means the route is there and simply wants POST.
-        verdict: r.status === 405 ? 'exists'
+        verdict: (r.status === 422 || r.status === 400) ? 'exists'
                : r.status === 404 ? 'missing'
                : (r.status === 401 || r.status === 403) ? 'auth'
+               : r.status === 200 || r.status === 201 ? 'started-a-job'
                : 'unclear',
         detail: detail
       });
