@@ -32,6 +32,26 @@ async function refundIfDead(id, status) {
   }
 }
 
+// Keep a finished job in the signed-in account's list, so the Generations tab
+// survives a reload and follows the person to another device. Memory alone was
+// losing everything on refresh. The guard key means a repeated poll adds it
+// once, and the list expires alongside the provider's own files.
+async function remember(id, url) {
+  if (!L.authReady || !url) return;
+  try {
+    const record = await L.getJSON(`job:${id}`);
+    if (!record || !record.userId) return;
+    const first = await L.cmd('SET', `listed:${id}`, '1', 'NX', 'EX', String(8 * 86400));
+    if (first === null) return;
+    const key = `gen:${record.userId}`;
+    await L.cmd('LPUSH', key, JSON.stringify({ id, url, at: Date.now() }));
+    await L.cmd('LTRIM', key, '0', '49');
+    await L.cmd('EXPIRE', key, String(8 * 86400));
+  } catch (err) {
+    console.error('remember_failed', id, err.message);
+  }
+}
+
 function credentials() {
   const combined = process.env.HIGGSFIELD_CREDENTIALS;
   if (combined) return combined;
@@ -105,12 +125,14 @@ module.exports = async (req, res) => {
     }
 
     const status = data.status || 'unknown';
+    const url = status === 'completed' ? firstUrl(data) : null;
     await refundIfDead(id, status);
+    if (status === 'completed') await remember(id, url);
 
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       status,
-      url: status === 'completed' ? firstUrl(data) : null,
+      url,
       // 'nsfw' and 'failed' are terminal — the UI should stop polling on them.
       terminal: ['completed', 'failed', 'nsfw'].includes(status)
     });
