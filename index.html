@@ -910,70 +910,170 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
      these get a working Generate button. Everything else says so plainly
      rather than pretending. Specs are deliberately thin — they are marked
      partial because they have not been verified against a live account. */
+  var DOC = 'https://open.higgsfield.ai/models';
+
   var LIVE_MODELS = {
     image: [{
-      id: 'higgsfield-soul-v2',
-      name: 'Soul v2',
-      provider: 'Higgsfield',
+      id: 'recraft-4-1',
+      name: 'Recraft 4.1',
+      provider: 'Recraft \u00B7 via Higgsfield',
       status: 'partial',
       modes: ['generate'],
-      endpoint: '/higgsfield-ai/soul/v2/standard',
+      endpoint: '/recraft/v4.1/text-to-image',
+      resolutions: ['1k'],
+      ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+      send: { resolution: true, aspect_ratio: true, extra: { output_format: 'png' } },
       limits: [
-        'Text-to-image, on this deployment\u2019s own Higgsfield key.',
-        'Size and style options are not verified against a live generation yet.'
+        'Text-to-image. One resolution tier, 1k.',
+        'Its reference lists fourteen aspect ratios; the seven most used are offered here.'
       ],
-      source: 'https://docs.higgsfield.ai',
-      references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai',
-        checked: '2026-09-22', note: 'This build sends the prompt only.' }
+      source: DOC + '/recraft/v4.1/text-to-image/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/recraft/v4.1/text-to-image/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
+    }, {
+      id: 'qwen-image-3',
+      name: 'Qwen Image 3',
+      provider: 'Alibaba \u00B7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/alibaba/qwen-image-3/text-to-image',
+      resolutions: ['1k', '2k'],
+      ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'],
+      send: { resolution: true, aspect_ratio: true },
+      limits: [
+        'Text-to-image at 1k or 2k. Output is PNG.',
+        'Takes Chinese or English prompts.'
+      ],
+      source: DOC + '/alibaba/qwen-image-3/text-to-image/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/alibaba/qwen-image-3/text-to-image/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
+    }, {
+      id: 'grok-imagine-2',
+      name: 'Grok Imagine 2.0',
+      provider: 'xAI \u00B7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/xai/grok-imagine-image-2.0',
+      resolutions: ['1k', '2k'],
+      ratios: ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3'],
+      send: { resolution: true, aspect_ratio: true, extra: { quality: 'medium' } },
+      limits: [
+        'Text-to-image at 1k or 2k.',
+        'Its quality setting offers low and medium only; medium is sent.'
+      ],
+      source: DOC + '/xai/grok-imagine-image-2.0/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/xai/grok-imagine-image-2.0/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
     }],
     video: [{
       id: 'seedance2_5',
       name: 'Seedance 2.5',
-      provider: 'ByteDance \u00b7 via Higgsfield',
+      provider: 'ByteDance \u00B7 via Higgsfield',
       status: 'verified',
       modes: ['generate'],
       endpoint: '/bytedance/seedance-2.5/text-to-video',
       resolutions: ['720p', '480p'],
       ratios: ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'],
       outputSeconds: { min: 4, max: 30, step: 1 },
+      send: { duration: true, resolution: true, aspect_ratio: true,
+              extra: { output_format: 'mp4', generate_audio: true } },
       limits: [
-        'Text-to-video, with audio.',
-        '4\u201330 seconds \u00b7 480p or 720p \u00b7 six aspect ratios.'
+        'Text-to-video with audio. 4 to 30 seconds.',
+        '480p or 720p. Six aspect ratios.'
       ],
-      source: 'https://open.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video/api-reference',
-      references: { image: 1, unverified: true,
-        source: 'https://open.higgsfield.ai/models/bytedance/seedance-2.5/text-to-video/api-reference',
-        checked: '2026-09-22', note: 'This build sends a text prompt only.' }
+      source: DOC + '/bytedance/seedance-2.5/text-to-video/api-reference',
+      references: { image: 1, unverified: false, source: DOC + '/bytedance/seedance-2.5/text-to-video/api-reference',
+        checked: '2026-09-27', note: 'Run end to end on this deployment.' }
     }, {
-      id: 'kling-2-5-turbo-pro',
-      name: 'Kling 2.5 Turbo Pro',
-      provider: 'Kling AI \u00b7 via Higgsfield',
+      id: 'kling-3-0',
+      name: 'Kling 3.0',
+      provider: 'Kling \u00B7 via Higgsfield',
       status: 'partial',
       modes: ['generate'],
-      endpoint: '/kling-video/v2.5-turbo/pro/text-to-video',
+      endpoint: '/kling-video/v3.0/std/text-to-video',
+      ratios: ['16:9', '9:16', '1:1'],
+      outputSeconds: { min: 3, max: 15, step: 1 },
       fixedQuality: 'Set by the model',
+      send: { duration: true, aspect_ratio: true, extra: { sound: 'on' } },
       limits: [
-        'Text-to-video.',
-        'Its API reference lists duration 5 or 10 seconds and no resolution or aspect ratio setting, so quality is whatever the model returns. This build sends the prompt only.'
+        'Text-to-video with sound. 3 to 15 seconds.',
+        'Its reference lists no resolution setting, so output size is the model\u2019s own.'
       ],
-      source: 'https://docs.higgsfield.ai/docs/openapi.json',
-      references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai/docs/openapi.json',
-        checked: '2026-09-22', note: 'Endpoint confirmed against the live key; options unverified.' }
+      source: DOC + '/kling-video/v3.0/std/text-to-video/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/kling-video/v3.0/std/text-to-video/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
     }, {
-      id: 'hailuo-2-3',
-      name: 'Hailuo 2.3',
-      provider: 'MiniMax \u00b7 via Higgsfield',
+      id: 'minimax-h3',
+      name: 'MiniMax H3',
+      provider: 'MiniMax \u00B7 via Higgsfield',
       status: 'partial',
       modes: ['generate'],
-      endpoint: '/minimax/hailuo-2.3/standard/text-to-video',
-      fixedQuality: '768p, fixed by the model',
+      endpoint: '/minimax/h3/text-to-video',
+      resolutions: ['2K'],
+      ratios: ['auto', '16:9', '9:16', '4:3', '3:4', '1:1', '21:9'],
+      outputSeconds: { min: 5, max: 15, step: 1 },
+      send: { duration: true, resolution: true, aspect_ratio: true },
       limits: [
-        'Text-to-video.',
-        'Its API reference states 768p output and duration 6 or 10 seconds, with no resolution setting. This build sends the prompt only.'
+        'Text-to-video. 5 to 15 seconds.',
+        'One resolution, 2K. That is the only value its reference allows.'
       ],
-      source: 'https://docs.higgsfield.ai/docs/openapi.json',
-      references: { image: 1, unverified: true, source: 'https://docs.higgsfield.ai/docs/openapi.json',
-        checked: '2026-09-22', note: 'Endpoint confirmed against the live key; options unverified.' }
+      source: DOC + '/minimax/h3/text-to-video/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/minimax/h3/text-to-video/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
+    }, {
+      id: 'wan-3-0-prime',
+      name: 'Wan 3.0 Prime',
+      provider: 'Alibaba \u00B7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/alibaba/wan-3.0-prime/text-to-video',
+      resolutions: ['1080p', '720p', '480p'],
+      ratios: ['16:9', '4:3', '1:1', '3:4', '9:16', 'adaptive'],
+      outputSeconds: { min: 2, max: 30, step: 1 },
+      send: { duration: true, resolution: true, aspect_ratio: true,
+              extra: { generate_audio: true } },
+      limits: [
+        'Text-to-video with audio. 2 to 30 seconds.',
+        'The only model here that offers 1080p.'
+      ],
+      source: DOC + '/alibaba/wan-3.0-prime/text-to-video/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/alibaba/wan-3.0-prime/text-to-video/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
+    }, {
+      id: 'cinema-studio-4',
+      name: 'Cinema Studio 4.0',
+      provider: 'Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/higgsfield/cinema-studio/4.0',
+      outputSeconds: { min: 1, max: 30, step: 1 },
+      fixedQuality: 'Set by the model',
+      send: { duration: true },
+      limits: [
+        'Text-to-video, up to 30 seconds.',
+        'Its reference shows resolution and ratio only as examples, never the allowed values, so this build sends neither.'
+      ],
+      source: DOC + '/higgsfield/cinema-studio/4.0/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/higgsfield/cinema-studio/4.0/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. Options undocumented.' }
+    }, {
+      id: 'grok-video-1-5',
+      name: 'Grok Imagine Video 1.5',
+      provider: 'xAI \u00B7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/xai/grok-imagine-video/v1.5/reference-to-video',
+      resolutions: ['1080p', '720p', '480p'],
+      ratios: ['auto', '16:9', '9:16', '4:3', '3:4', '1:1', '3:2', '2:3'],
+      outputSeconds: { min: 1, max: 15, step: 1 },
+      send: { duration: true, resolution: true, aspect_ratio: true },
+      limits: [
+        'Text-to-video, 1 to 15 seconds, up to 1080p.',
+        'Named reference-to-video, but its reference marks the image inputs optional, so a prompt alone is enough.'
+      ],
+      source: DOC + '/xai/grok-imagine-video/v1.5/reference-to-video/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/xai/grok-imagine-video/v1.5/reference-to-video/api-reference',
+        checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
     }]
   };
 
@@ -1410,23 +1510,43 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   // Seedance takes duration / resolution / aspect_ratio; the names and allowed
   // values come from its own API reference. Read them off the form where the
   // form has them, and otherwise send the documented defaults.
+  // Every model takes a different payload, so the request is assembled from
+  // what the catalog says that model accepts rather than from a branch per
+  // endpoint. A key is only sent when the model's own reference lists it, and
+  // a value read off the form is only used when it is one the model allows;
+  // anything else falls back to the model's first listed option. Sending a
+  // field a model does not know, or a value it does not take, is a rejected
+  // request and a charge-then-refund for whoever pressed the button.
   function buildInput(path, prompt) {
     var input = { prompt: prompt };
-    if (path !== '/bytedance/seedance-2.5/text-to-video') return input;
 
-    var seconds = Number((q('#output-seconds') || {}).value);
-    input.duration = (Number.isFinite(seconds) && seconds >= 4 && seconds <= 30) ? Math.round(seconds) : 5;
+    var model = null;
+    try { model = currentModel(); } catch (e) {}
+    var send = model && model.send;
+    if (!send) return input;
 
-    var ratio = (q('#ratio-value') || {}).textContent;
-    var allowedRatios = ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'];
-    input.aspect_ratio = allowedRatios.indexOf(ratio) > -1 ? ratio : '16:9';
+    if (send.duration && model.outputSeconds) {
+      var d = model.outputSeconds;
+      var seconds = Math.round(Number((q('#output-seconds') || {}).value));
+      if (!isFinite(seconds)) seconds = d.min;
+      input.duration = Math.max(d.min, Math.min(d.max, seconds));
+    }
 
-    var resField = q('#field-resolution');
-    var res = resField && String(resField.value).toLowerCase();
-    input.resolution = (res === '480p' || res === '720p') ? res : '720p';
+    if (send.resolution && model.resolutions && model.resolutions.length) {
+      var picked = String((q('#field-resolution') || {}).value || '');
+      input.resolution = model.resolutions.indexOf(picked) > -1 ? picked : model.resolutions[0];
+    }
 
-    input.output_format = 'mp4';
-    input.generate_audio = true;
+    if (send.aspect_ratio && model.ratios && model.ratios.length) {
+      var ratio = (q('#ratio-value') || {}).textContent;
+      input.aspect_ratio = model.ratios.indexOf(ratio) > -1 ? ratio : model.ratios[0];
+    }
+
+    if (send.extra) {
+      for (var key in send.extra) {
+        if (Object.prototype.hasOwnProperty.call(send.extra, key)) input[key] = send.extra[key];
+      }
+    }
     return input;
   }
 
