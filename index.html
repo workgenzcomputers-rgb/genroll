@@ -1165,7 +1165,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
     // Each step is a no-op once it has been done, so the mutations this makes
     // settle on the next pass instead of feeding back into the observer.
-    new MutationObserver(fixFields).observe(box, { childList: true });
+    new MutationObserver(function () {
+      fixFields();
+      try { paintCost(); } catch (e) {}
+    }).observe(box, { childList: true });
     try { fixFields(); } catch (e) {}
   })();
 
@@ -1362,6 +1365,48 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     if (small) small.textContent = msg;
   }
 
+  // What this click will cost, written beside the button that spends it. The
+  // figures come from /api/config, which reads the same COST_IMAGE and
+  // COST_VIDEO the server charges with, so the label cannot promise one price
+  // and the ledger take another. The page's own estimate was a guess from a
+  // pricing table these models do not carry, which is why it read "credit
+  // quote pending".
+  var BALANCE = null;
+
+  function costFor(model) {
+    var costs = (CFG && CFG.costs) || {};
+    var id = model && model.id;
+    var isVideo = (LIVE_MODELS.video || []).some(function (m) { return m.id === id; });
+    var n = isVideo ? costs.video : costs.image;
+    return (typeof n === 'number' && isFinite(n)) ? n : null;
+  }
+
+  function paintCost() {
+    var small = q('.generate-row small');
+    if (!small) return;
+    var model = null;
+    try { model = currentModel(); } catch (e) {}
+    var cost = costFor(model);
+    if (cost == null) return;
+
+    var line = cost + (cost === 1 ? ' credit' : ' credits');
+    if (BALANCE != null) {
+      line += ' \u00B7 you have ' + BALANCE;
+      if (BALANCE < cost) line += ', top up to run this';
+    }
+    small.textContent = line;
+  }
+
+  async function readBalance() {
+    try {
+      var me = await fetch('/api/auth?action=me', { cache: 'no-store' }).then(function (r) { return r.json(); });
+      BALANCE = (me && me.signedIn) ? Number(me.credits || 0) : null;
+    } catch (e) {
+      BALANCE = null;
+    }
+    paintCost();
+  }
+
   // Seedance takes duration / resolution / aspect_ratio; the names and allowed
   // values come from its own API reference. Read them off the form where the
   // form has them, and otherwise send the documented defaults.
@@ -1422,6 +1467,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     } finally {
       btn.disabled = !CFG.generation.enabled;
       if (window.__GENROLL_REFRESH_ME) window.__GENROLL_REFRESH_ME();
+      readBalance();
     }
   }
 
@@ -1604,6 +1650,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     } catch (e) {}
   }
   loadGenerations();
+  readBalance();
 
   /* ---- top-up ----------------------------------------------------------- */
 
