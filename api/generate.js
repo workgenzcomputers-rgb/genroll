@@ -38,6 +38,7 @@ const COST = {
   '/minimax/h3/text-to-video': VIDEO,
   '/alibaba/wan-3.0-prime/text-to-video': VIDEO,
   '/higgsfield/cinema-studio/4.0': VIDEO,
+  '/higgsfield/genjutsu/motion-transfer/v1.0': VIDEO,
   '/recraft/v4.1/text-to-image': IMAGE,
   '/alibaba/qwen-image-3/text-to-image': IMAGE,
   '/xai/grok-imagine-image-2.0': IMAGE
@@ -116,8 +117,43 @@ module.exports = async (req, res) => {
 
   const input = (body.input && typeof body.input === 'object') ? body.input : {};
   const prompt = String(input.prompt || '').trim();
-  if (!prompt) return res.status(400).json({ error: 'missing_prompt' });
+  // Motion transfer works from the source clip and stills, so it is the one
+  // model that can run without a written prompt.
+  const motionTransfer = path === '/higgsfield/genjutsu/motion-transfer/v1.0';
+  if (!prompt && !motionTransfer) return res.status(400).json({ error: 'missing_prompt' });
   if (prompt.length > 5000) return res.status(400).json({ error: 'prompt_too_long' });
+
+  // Motion transfer takes the source material as links the provider fetches
+  // itself. Those links come from whoever is using the site, so check them
+  // here rather than forwarding whatever was typed: https only, a real host,
+  // and nothing pointing back inside a private network.
+  const badUrl = (value) => {
+    let u;
+    try { u = new URL(String(value)); } catch { return 'that is not a URL'; }
+    if (u.protocol !== 'https:') return 'links must start with https://';
+    const h = u.hostname.toLowerCase();
+    if (h === 'localhost' || h.endsWith('.local') || h === '[::1]') return 'that address is not reachable from the internet';
+    if (/^(10\.|127\.|0\.|169\.254\.|192\.168\.)/.test(h)) return 'that address is not reachable from the internet';
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return 'that address is not reachable from the internet';
+    if (String(value).length > 2000) return 'that link is too long';
+    return null;
+  };
+
+  const links = [];
+  if (input.video_url) links.push(input.video_url);
+  if (Array.isArray(input.image_urls)) links.push(...input.image_urls);
+  for (const link of links) {
+    const why = badUrl(link);
+    if (why) return res.status(400).json({ error: 'bad_source_url', message: 'Check the source links: ' + why + '.' });
+  }
+  if (links.length > 6) return res.status(400).json({ error: 'too_many_sources' });
+
+  if (motionTransfer && (!input.video_url || !Array.isArray(input.image_urls) || !input.image_urls.length)) {
+    return res.status(400).json({
+      error: 'missing_sources',
+      message: 'Genjutsu needs a link to the motion video and at least one image link.'
+    });
+  }
 
   // Take the credits before calling the provider, so two tabs cannot both
   // spend the last credit. Anything that goes wrong below puts them back.
