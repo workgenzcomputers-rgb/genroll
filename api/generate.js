@@ -27,16 +27,21 @@ const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').re
 const IMAGE = Number(process.env.COST_IMAGE || 5);
 const VIDEO = Number(process.env.COST_VIDEO || 40);
 
+// One flagship per provider. Each of these was confirmed against this
+// deployment's key: an empty POST came back 400 or 422 naming the fields it
+// wanted, while two invented paths in the same run came back 404. The older
+// variants that used to sit here (Soul, Kling 2.5, Hailuo 2.3, DoP) came out
+// when their successors went in.
 const COST = {
-  '/higgsfield-ai/soul/v2/standard': IMAGE,
-  '/higgsfield-ai/soul/standard': IMAGE,
   '/bytedance/seedance-2.5/text-to-video': VIDEO,
-  '/kling-video/v2.5-turbo/pro/text-to-video': VIDEO,
-  '/kling-video/v2.5-turbo/pro/image-to-video': VIDEO,
-  '/kling-video/v2.5-turbo/standard/image-to-video': VIDEO,
-  '/minimax/hailuo-2.3/standard/text-to-video': VIDEO,
-  '/minimax/hailuo-2.3/standard/image-to-video': VIDEO,
-  '/v1/image2video/dop': VIDEO
+  '/kling-video/v3.0/std/text-to-video': VIDEO,
+  '/minimax/h3/text-to-video': VIDEO,
+  '/alibaba/wan-3.0-prime/text-to-video': VIDEO,
+  '/higgsfield/cinema-studio/4.0': VIDEO,
+  '/xai/grok-imagine-video/v1.5/reference-to-video': VIDEO,
+  '/recraft/v4.1/text-to-image': IMAGE,
+  '/alibaba/qwen-image-3/text-to-image': IMAGE,
+  '/xai/grok-imagine-image-2.0': IMAGE
 };
 
 // Only these endpoint paths may be called, so a visitor cannot point this
