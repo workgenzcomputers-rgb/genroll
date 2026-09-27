@@ -1470,6 +1470,43 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     return (LIVE_MODELS.video || []).some(function (m) { return m.id === id; }) ? 'video' : 'image';
   }
 
+  // Clicking a result used to send you to the provider's raw file in a new
+  // tab. Play it here instead, in the page's own dialog, with controls and a
+  // real full-screen button. The link stays a link underneath, so cmd-click,
+  // middle-click and "save as" still reach the original file.
+  function openPlayer(g) {
+    var dlg = q('#media-dialog');
+    var title = q('#dialog-title');
+    var body = q('#dialog-content');
+    if (!dlg || !body) return;
+
+    if (title) title.textContent = g.name;
+    if (g.type === 'video') {
+      body.innerHTML =
+        '<video id="player-media" src="' + g.url + '" controls autoplay playsinline '
+        + 'style="width:100%;max-height:72vh;border-radius:12px;background:#000"></video>'
+        + '<p class="note" style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+        + '<button type="button" id="player-fullscreen">Full screen</button>'
+        + '<a href="' + g.url + '" target="_blank" rel="noopener noreferrer">Open the original file</a>'
+        + '<span>Provider link, gone in about a week.</span></p>';
+    } else if (g.type === 'audio') {
+      body.innerHTML = '<audio id="player-media" src="' + g.url + '" controls autoplay style="width:100%"></audio>';
+    } else {
+      body.innerHTML = '<img src="' + g.url + '" alt="' + g.name + '" style="width:100%;border-radius:12px">';
+    }
+
+    var fs = q('#player-fullscreen');
+    if (fs) fs.onclick = function () {
+      var v = q('#player-media');
+      if (!v) return;
+      // webkitEnterFullscreen is the only one iPhone Safari honours on video.
+      var go = v.requestFullscreen || v.webkitRequestFullscreen || v.webkitEnterFullscreen;
+      if (go) { try { go.call(v); } catch (e) {} }
+    };
+
+    dlg.showModal();
+  }
+
   function addGenerated(url, model) {
     GEN.unshift({
       id: 'gen-' + Date.now(),
@@ -1523,6 +1560,19 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
           v.addEventListener('mouseleave', function () {
             v.pause();
             try { v.currentTime = 0.1; } catch (e) {}
+          });
+        });
+
+        // Cards are rendered straight from GEN, so position maps to entry.
+        host.querySelectorAll('.media-card').forEach(function (card, i) {
+          var g = GEN[i];
+          var link = card.querySelector('.thumb');
+          if (!g || !link) return;
+          link.addEventListener('click', function (e) {
+            // Leave the modified clicks alone: those mean "open elsewhere".
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            openPlayer(g);
           });
         });
       }
