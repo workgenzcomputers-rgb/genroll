@@ -381,6 +381,27 @@ header{backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20
 .brand{cursor:pointer;border-radius:12px;padding:4px 6px;margin-left:-6px;transition:background .18s ease}
 .brand:hover{background:rgba(255,255,255,.06)}
 .brand:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+
+/* ---- one bar, not two ---------------------------------------------------- */
+/* Under 820px the nav broke onto a full-width row of its own, so the header
+   read as two stacked bars: a logo strip, and a menu below it. It sits beside
+   the wordmark at every width now, and scrolls sideways if the window really
+   is too narrow, so the row never doubles in height.
+   The status pill is the first thing to give up room, because it repeats what
+   the page says elsewhere; the links do not. */
+.topbar{flex-wrap:nowrap;row-gap:0}
+.topbar .brand{flex:0 0 auto;margin:0}
+.topbar nav{
+  order:1;width:auto;flex:1 1 auto;min-width:0;justify-content:flex-start;
+  overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+}
+.topbar nav::-webkit-scrollbar{display:none}
+.topbar nav button{white-space:nowrap;flex:0 0 auto}
+.topbar .profile-shell{order:2;margin-left:auto;flex:0 0 auto}
+@media(max-width:1180px){.topbar .pill{display:none}}
+@media(max-width:820px){.topbar{gap:20px}.topbar nav{gap:22px}.topbar nav button{padding:10px 0}}
+@media(max-width:560px){.topbar{gap:12px;padding:12px 14px}.topbar nav{gap:16px}}
+
 </style></head>
 <body>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
@@ -2503,13 +2524,11 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
   /* ---- go ----------------------------------------------------------------- */
 
-  // Let the credits circle be a way in when nobody is signed in.
-  var circle = document.querySelector('.credit-circle');
-  if (circle) {
-    circle.addEventListener('click', function (e) {
-      if (ME.available && !ME.signedIn) { e.preventDefault(); e.stopPropagation(); openSignIn(); }
-    }, true);
-  }
+  // The credits circle used to open the sign-in dialog for anyone not signed
+  // in, and swallowed the click on its way, so the one control on the page
+  // labelled "credits" never showed what credits cost. It goes to the Plans
+  // page for everybody now. Signing in belongs at the point of buying, and the
+  // Plans page asks there.
 
   window.__GENROLL_SIGNIN = openSignIn;
   window.__GENROLL_REFRESH_ME = loadMe;
