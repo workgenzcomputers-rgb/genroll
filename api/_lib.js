@@ -214,6 +214,8 @@ const RATES = {
   // Marketing Studio publishes a price for its 1k tier only, so only 1k is
   // offered on the page; 2k and 4k would be sold at a rate nobody has stated.
   '/marketing-studio/image':                   { usd: 0.0162, per: 'image', from: true },
+  // Soul 2 prices its 720p tier only, so 720p is the tier the page sells.
+  '/higgsfield-ai/soul/v2/standard':           { usd: 0.0032, per: 'image', from: true },
   '/recraft/v4.1/text-to-image':               { usd: 0.035,  per: 'image' },
   '/alibaba/qwen-image-3/text-to-image':       { usd: 0.04,   per: 'image', from: true },
   '/xai/grok-imagine-image-2.0':               { usd: 0.04,   per: 'image', from: true }

@@ -46,6 +46,7 @@ const ALLOWED_PATHS = new Set([
   '/higgsfield/cinema-studio/4.0',
   '/higgsfield/genjutsu/motion-transfer/v1.0',
   '/marketing-studio/image',
+  '/higgsfield-ai/soul/v2/standard',
   '/recraft/v4.1/text-to-image',
   '/alibaba/qwen-image-3/text-to-image',
   '/xai/grok-imagine-image-2.0'
