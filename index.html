@@ -1559,8 +1559,13 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     var audioFilter = document.querySelector('[data-filter="audio"]');
     if (audioFilter) audioFilter.remove();
 
+    // The tabs stay in the document. The page's tool switcher runs
+    //   $('#audio-tabs').hidden = tool !== 'audio'
+    // on every switch, so removing the node made that line throw, and the model
+    // list never reached the video catalogue \u2014 picking Video left the image
+    // models on screen. They were already hidden; this only makes it permanent.
     var tabs = document.getElementById('audio-tabs');
-    if (tabs) tabs.remove();
+    if (tabs) { tabs.hidden = true; tabs.style.display = 'none'; }
 
     Array.prototype.slice.call(document.querySelectorAll('.tools button'))
       .filter(function (b) { return b.textContent.trim().toLowerCase() === 'audio'; })
