@@ -1069,6 +1069,24 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       source: DOC + '/marketing-studio/image/api-reference',
       references: { image: 1, unverified: true, source: DOC + '/marketing-studio/image/api-reference',
         checked: '2026-09-28', note: 'Parameters read from its own API reference. Not yet run against the live key.' }
+    }, {
+      id: 'soul-2',
+      name: 'Soul 2',
+      provider: 'Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/higgsfield-ai/soul/v2/standard',
+      resolutions: ['720p'],
+      ratios: ['4:3', '3:4', '1:1', '16:9', '9:16', '3:2', '2:3'],
+      send: { resolution: true, aspect_ratio: true, extra: { batch_size: 1, enhance_prompt: true } },
+      limits: [
+        'Portraits and fashion photography, with natural skin and editorial lighting.',
+        'One credit a picture \u2014 the cheapest model on this deployment by some distance.',
+        'It also offers 1080p, but publishes a price for 720p only, so 720p is the tier sold here.'
+      ],
+      source: DOC + '/higgsfield-ai/soul/v2/standard/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/higgsfield-ai/soul/v2/standard/api-reference',
+        checked: '2026-09-28', note: 'Parameters read from its own API reference. Not yet run against the live key.' }
     }],
     video: [{
       id: 'seedance2_5',
