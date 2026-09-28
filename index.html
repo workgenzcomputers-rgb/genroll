@@ -1604,10 +1604,16 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     // oninput at the page's own old estimate. Add a listener behind that one so
     // dragging the slider repaints the real price over the guess.
     function bindSeconds() {
-      var slider = document.getElementById('output-seconds');
-      if (!slider || slider.__costBound) return;
-      slider.__costBound = true;
-      slider.addEventListener('input', function () { try { paintCost(); } catch (e) {} });
+      // Both of these change the bill: the provider charges by the second and by
+      // the quality, and one tier can cost double the next. The quality select
+      // had no listener, so switching it left the old number sitting there.
+      [document.getElementById('output-seconds'), document.getElementById('field-resolution')]
+        .forEach(function (el) {
+          if (!el || el.__costBound) return;
+          el.__costBound = true;
+          el.addEventListener('input', function () { try { paintCost(); } catch (e) {} });
+          el.addEventListener('change', function () { try { paintCost(); } catch (e) {} });
+        });
     }
 
     new MutationObserver(function () {
