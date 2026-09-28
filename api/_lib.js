@@ -203,6 +203,10 @@ function isOwner(email) {
 const RATES = {
   '/bytedance/seedance-2.5/text-to-video':     { usd: 0.2057, per: 'second', from: true },
   '/kling-video/v3.0/std/text-to-video':       { usd: 0.084,  per: 'second' },
+  // Omni is quoted at two tiers: $0.084 a second for a one-second clip and
+  // $0.112 for the five- and ten-second ones. Five and ten are the only lengths
+  // it accepts, so the higher tier is the one that can actually be billed.
+  '/kling-video/omni/first-last-frame':        { usd: 0.112,  per: 'second' },
   '/minimax/h3/text-to-video':                 { usd: 0.13,   per: 'second' },
   '/alibaba/wan-3.0-prime/text-to-video':      { usd: 0.068,  per: 'second', from: true },
   '/higgsfield/cinema-studio/4.0':             { usd: 0.2057, per: 'second', from: true },

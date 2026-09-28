@@ -40,6 +40,7 @@ const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').re
 const ALLOWED_PATHS = new Set([
   '/bytedance/seedance-2.5/text-to-video',
   '/kling-video/v3.0/std/text-to-video',
+  '/kling-video/omni/first-last-frame',
   '/minimax/h3/text-to-video',
   '/alibaba/wan-3.0-prime/text-to-video',
   '/higgsfield/cinema-studio/4.0',
@@ -147,6 +148,8 @@ module.exports = async (req, res) => {
 
   const links = [];
   if (input.video_url) links.push(input.video_url);
+  if (input.first_frame_url) links.push(input.first_frame_url);
+  if (input.last_frame_url) links.push(input.last_frame_url);
   if (Array.isArray(input.image_urls)) links.push(...input.image_urls);
   for (const link of links) {
     const why = badUrl(link);
@@ -166,6 +169,15 @@ module.exports = async (req, res) => {
   // length comes from the uploaded clip rather than a slider. Without that
   // number the price would silently fall back to one second, so refuse the job
   // instead of running a three-dollar model for the price of one.
+  // Omni animates away from a start frame, so without one there is nothing to
+  // animate; the end frame is genuinely optional.
+  if (path === '/kling-video/omni/first-last-frame' && !input.first_frame_url) {
+    return res.status(400).json({
+      error: 'missing_first_frame',
+      message: 'Kling Omni needs a start frame to animate from.'
+    });
+  }
+
   if (motionTransfer && !(seconds >= 1)) {
     return res.status(400).json({
       error: 'missing_source_length',
