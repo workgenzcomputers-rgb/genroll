@@ -1058,12 +1058,12 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       status: 'partial',
       modes: ['generate'],
       endpoint: '/marketing-studio/image',
-      resolutions: ['1k'],
+      resolutions: ['1k', '2k', '4k'],
       ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'],
       send: { resolution: true, aspect_ratio: true, extra: { enhance_prompt: false } },
       limits: [
         'Campaign and product images from a written brief.',
-        'Its reference offers 1k, 2k and 4k but publishes a price for 1k only, so 1k is the one tier sold here rather than charging a rate nobody has stated.',
+        '1k, 2k and 4k, each charged at its own rate \u2014 4k is forty times the price of 1k, and the line by the button says so before you press it.',
         'Eight aspect ratios, the widest set of any image model on this deployment.'
       ],
       source: DOC + '/marketing-studio/image/api-reference',
@@ -1076,13 +1076,13 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       status: 'partial',
       modes: ['generate'],
       endpoint: '/higgsfield-ai/soul/v2/standard',
-      resolutions: ['720p'],
+      resolutions: ['720p', '1080p'],
       ratios: ['4:3', '3:4', '1:1', '16:9', '9:16', '3:2', '2:3'],
       send: { resolution: true, aspect_ratio: true, extra: { batch_size: 1, enhance_prompt: true } },
       limits: [
         'Portraits and fashion photography, with natural skin and editorial lighting.',
         'One credit a picture \u2014 the cheapest model on this deployment by some distance.',
-        'It also offers 1080p, but publishes a price for 720p only, so 720p is the tier sold here.'
+        '720p or 1080p, each at its own rate. Both round up to one credit.'
       ],
       source: DOC + '/higgsfield-ai/soul/v2/standard/api-reference',
       references: { image: 1, unverified: true, source: DOC + '/higgsfield-ai/soul/v2/standard/api-reference',
@@ -1878,6 +1878,37 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     return pricing.rates[model.endpoint] || null;
   }
 
+  // Which quality the page is about to ask for. The provider charges by it \u2014
+  // Genjutsu is twice the price at 720p as at 480p \u2014 so the quote has to read
+  // the same control the request will send.
+  function quotedResolution(model) {
+    var picked = String((q('#field-resolution') || {}).value || '');
+    if (model && model.resolutions && model.resolutions.length) {
+      return model.resolutions.indexOf(picked) > -1 ? picked : model.resolutions[0];
+    }
+    return picked || null;
+  }
+
+  // Rates arrive at full precision so the arithmetic matches the server's to
+  // the paisa; only the label is rounded.
+  function money(n) {
+    return (Math.round(n * 100) / 100).toString();
+  }
+
+  // Credits for one second, or one picture, at that quality. An unknown tier
+  // takes the dearest one, the same way the server does.
+  function creditsPerUnit(model) {
+    var rate = rateFor(model);
+    if (!rate) return null;
+    if (typeof rate.credits === 'number') return rate.credits;
+    var tiers = rate.tiers || {};
+    var key = quotedResolution(model);
+    if (key && Object.prototype.hasOwnProperty.call(tiers, key)) return tiers[key];
+    var worst = 0;
+    for (var name in tiers) if (tiers[name] > worst) worst = tiers[name];
+    return worst || null;
+  }
+
   // How many seconds this run will be billed for. The slider says it for the
   // models that have one. Motion transfer has no slider \u2014 its output lasts as
   // long as the clip it copies \u2014 so the measured length of that upload is the
@@ -1899,11 +1930,12 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
   function costFor(model) {
     var rate = rateFor(model);
-    if (!rate) return null;
-    if (rate.per !== 'second') return Math.ceil(rate.credits);
+    var per = creditsPerUnit(model);
+    if (!rate || per == null) return null;
+    if (rate.per !== 'second') return Math.ceil(per);
     var seconds = quotedSeconds(model);
     if (seconds == null) return null;
-    return Math.ceil(rate.credits * seconds);
+    return Math.ceil(per * seconds);
   }
 
   function paintCost() {
@@ -1919,18 +1951,19 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     }
 
     var rate = rateFor(model);
-    if (!rate) return;
+    var per = creditsPerUnit(model);
+    if (!rate || per == null) return;
 
     var cost = costFor(model);
     if (cost == null) {
       // Only motion transfer reaches here: the price is real but unknowable
       // until the clip that sets its length has been chosen.
-      small.textContent = rate.credits + ' credits a second \u00B7 choose the motion video to see the total';
+      small.textContent = money(per) + ' credits a second \u00B7 choose the motion video to see the total';
       return;
     }
 
     var line = cost + (cost === 1 ? ' credit' : ' credits');
-    if (rate.per === 'second') line += ' \u00B7 ' + quotedSeconds(model) + 's at ' + rate.credits + '/s';
+    if (rate.per === 'second') line += ' \u00B7 ' + quotedSeconds(model) + 's at ' + money(per) + '/s';
     if (BALANCE != null) {
       line += ' \u00B7 you have ' + BALANCE;
       if (BALANCE < cost) line += ', top up to run this';
