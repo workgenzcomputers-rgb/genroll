@@ -1051,6 +1051,24 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       source: DOC + '/xai/grok-imagine-image-2.0/api-reference',
       references: { image: 1, unverified: true, source: DOC + '/xai/grok-imagine-image-2.0/api-reference',
         checked: '2026-09-27', note: 'Endpoint confirmed against the live key. No generation run yet.' }
+    }, {
+      id: 'marketing-studio-image',
+      name: 'Marketing Studio Image',
+      provider: 'Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/marketing-studio/image',
+      resolutions: ['1k'],
+      ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '21:9'],
+      send: { resolution: true, aspect_ratio: true, extra: { enhance_prompt: false } },
+      limits: [
+        'Campaign and product images from a written brief.',
+        'Its reference offers 1k, 2k and 4k but publishes a price for 1k only, so 1k is the one tier sold here rather than charging a rate nobody has stated.',
+        'Eight aspect ratios, the widest set of any image model on this deployment.'
+      ],
+      source: DOC + '/marketing-studio/image/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/marketing-studio/image/api-reference',
+        checked: '2026-09-28', note: 'Parameters read from its own API reference. Not yet run against the live key.' }
     }],
     video: [{
       id: 'seedance2_5',
