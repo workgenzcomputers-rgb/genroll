@@ -402,6 +402,59 @@ header{backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20
 @media(max-width:820px){.topbar{gap:20px}.topbar nav{gap:22px}.topbar nav button{padding:10px 0}}
 @media(max-width:560px){.topbar{gap:12px;padding:12px 14px}.topbar nav{gap:16px}}
 
+/* ---- the composer reads as one control ----------------------------------- */
+/* The settings used to sit above the prompt, so the first thing anyone came to
+   write was the last thing on the card. The prompt comes first now, its
+   settings hang off the bottom of it as one panel rather than a second card,
+   and Generate sits under the right-hand corner where the eye lands last.
+   Only the order and the framing change here: every control, id and handler is
+   exactly where it was. */
+.composer-body{display:flex;flex-direction:column}
+.composer-body > #audio-tabs{order:0}
+.composer-body > .row.between{order:1}
+.composer-body > .prompt-area{order:2}
+.composer-body > .controls{order:3}
+.composer-body > #model-fields{order:4}
+.composer-body > #mode-note{order:5}
+.composer-body > #source-inputs{order:6}
+.composer-body > #inline-elements{order:7}
+.composer-body > .generate-row{order:8}
+
+.composer-body > .prompt-area{
+  margin-top:20px;
+  padding:15px 16px 14px;
+  border:1px solid var(--line);
+  border-bottom:0;
+  border-radius:16px 16px 0 0;
+  background:rgba(255,255,255,.05);
+}
+.composer-body > .prompt-area #prompt{
+  background:transparent;border:0;padding:0;min-height:108px;
+}
+.composer-body > .prompt-area #prompt:focus{outline:none;box-shadow:none}
+
+.composer-body > .controls,
+.composer-body > #model-fields{
+  margin:0;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-top:0;
+  background:rgba(255,255,255,.025);
+}
+.composer-body > .controls{border-bottom:0}
+.composer-body > #model-fields{border-radius:0 0 16px 16px}
+
+.composer-body > .generate-row{
+  margin-top:18px;padding-top:0;border-top:0;
+  justify-content:flex-end;flex-wrap:wrap;gap:14px;
+}
+.composer-body > .generate-row small{max-width:none;text-align:right}
+@media(max-width:560px){
+  .composer-body > .generate-row{justify-content:stretch}
+  .composer-body > .generate-row button{width:100%}
+  .composer-body > .generate-row small{text-align:left}
+}
+
 </style></head>
 <body>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
@@ -1496,6 +1549,22 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
     brand.addEventListener('click', goHome);
     brand.addEventListener('keydown', goHome);
+  })();
+
+  /* ---- audio is not offered here ------------------------------------------ */
+  // The catalogue has no audio models on this deployment, so the Audio tool and
+  // the Audio filter only ever lead to an empty panel. Take the doors out
+  // rather than leave them opening onto nothing.
+  (function () {
+    var audioFilter = document.querySelector('[data-filter="audio"]');
+    if (audioFilter) audioFilter.remove();
+
+    var tabs = document.getElementById('audio-tabs');
+    if (tabs) tabs.remove();
+
+    Array.prototype.slice.call(document.querySelectorAll('.tools button'))
+      .filter(function (b) { return b.textContent.trim().toLowerCase() === 'audio'; })
+      .forEach(function (b) { b.remove(); });
   })();
 
   /* ---- returning credits -------------------------------------------------- */
