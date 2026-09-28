@@ -57,13 +57,11 @@ module.exports = (req, res) => {
       min: Number(process.env.RZP_MIN_TOPUP_INR || 10),
       max: Number(process.env.RZP_MAX_TOPUP_INR || 50000)
     },
-    // What a run costs, read from the same two variables /api/generate charges
-    // with, so the number beside the Generate button cannot drift away from
-    // the number actually taken off the balance.
-    costs: {
-      image: Number(process.env.COST_IMAGE || 5),
-      video: Number(process.env.COST_VIDEO || 40)
-    },
+    // What a run costs, built by the same function /api/generate charges with,
+    // so the number beside the Generate button cannot drift away from the number
+    // actually taken off the balance. Per model and per second, because that is
+    // how the provider bills: a flat figure was wrong for every model at once.
+    pricing: L.priceTable(),
     // Credits are bought, not billed monthly. Kept so older builds of the page
     // that still read `plans` degrade quietly instead of throwing.
     plans: {},

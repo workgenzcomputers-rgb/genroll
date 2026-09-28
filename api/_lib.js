@@ -186,9 +186,74 @@ function isOwner(email) {
   return OWNERS.indexOf(String(email).trim().toLowerCase()) > -1;
 }
 
+// --- what a generation costs --------------------------------------------------
+//
+// Every price here is Higgsfield's own published rate for that endpoint, read
+// from its catalogue on 2026-09-28. They are the LIST prices, not the
+// promotional ones on the dashboard that day: every one of those discounts
+// carries discount_expires_at = 2026-10-01, and a bill built on a rate that
+// dies in two days would start losing money the moment it did.
+//
+// A flat forty credits a video used to stand in for all of this. It was wrong
+// in both directions at once — Kling costs a fifth of that, and one Genjutsu
+// clip cost $3.41 against forty rupees taken.
+//
+// Where the catalogue says "from", the rate is the cheapest tier that model
+// sells; a higher resolution can cost more than this, so these are floors.
+const RATES = {
+  '/bytedance/seedance-2.5/text-to-video':     { usd: 0.2057, per: 'second', from: true },
+  '/kling-video/v3.0/std/text-to-video':       { usd: 0.084,  per: 'second' },
+  '/minimax/h3/text-to-video':                 { usd: 0.13,   per: 'second' },
+  '/alibaba/wan-3.0-prime/text-to-video':      { usd: 0.068,  per: 'second', from: true },
+  '/higgsfield/cinema-studio/4.0':             { usd: 0.2057, per: 'second', from: true },
+  '/higgsfield/genjutsu/motion-transfer/v1.0': { usd: 0.318,  per: 'second', from: true },
+  '/recraft/v4.1/text-to-image':               { usd: 0.035,  per: 'image' },
+  '/alibaba/qwen-image-3/text-to-image':       { usd: 0.04,   per: 'image', from: true },
+  '/xai/grok-imagine-image-2.0':               { usd: 0.04,   per: 'image', from: true }
+};
+
+const USD_INR = Number(process.env.USD_INR || 95.791);
+const MARGIN = Number(process.env.PRICE_MARGIN || 1.2);
+const MAX_SECONDS = 30;
+
+function rateFor(path) {
+  return Object.prototype.hasOwnProperty.call(RATES, path) ? RATES[path] : null;
+}
+
+// One credit is one rupee, so a charge is the provider's dollar cost converted
+// and marked up. Rounded up, because a fraction of a credit cannot be taken and
+// rounding down would sell the remainder at a loss.
+function creditsFor(path, seconds) {
+  const rate = rateFor(path);
+  if (!rate) return null;
+  let units = 1;
+  if (rate.per === 'second') {
+    units = Math.round(Number(seconds));
+    if (!isFinite(units) || units < 1) units = 1;
+    if (units > MAX_SECONDS) units = MAX_SECONDS;
+  }
+  return Math.ceil(rate.usd * units * USD_INR * MARGIN);
+}
+
+// What the page needs to quote a price before anything is spent. The same
+// numbers the server bills with, so the quote cannot drift from the charge.
+function priceTable() {
+  const out = {};
+  for (const path in RATES) {
+    if (!Object.prototype.hasOwnProperty.call(RATES, path)) continue;
+    out[path] = {
+      per: RATES[path].per,
+      from: Boolean(RATES[path].from),
+      credits: Math.ceil(RATES[path].usd * USD_INR * MARGIN * 100) / 100
+    };
+  }
+  return { rates: out, usdInr: USD_INR, margin: MARGIN, maxSeconds: MAX_SECONDS };
+}
+
 module.exports = {
   storeReady,
   isOwner,
+  rateFor, creditsFor, priceTable,
   authReady: Boolean(SESSION_SECRET && storeReady),
   googleReady: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   emailReady: Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM),

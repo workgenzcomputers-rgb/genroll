@@ -20,36 +20,34 @@ const L = require('./_lib');
 
 const BASE = (process.env.HIGGSFIELD_BASE_URL || 'https://api.higgsfield.ai').replace(/\/+$/, '');
 
-// What each endpoint costs the customer, in credits (1 credit = Rs.1). These
-// are deliberately flat and conservative: a wrong guess here is money, so the
-// number is charged up front and refunded in full if the job does not produce
-// anything. Override per deployment without touching code.
-const IMAGE = Number(process.env.COST_IMAGE || 5);
-const VIDEO = Number(process.env.COST_VIDEO || 40);
-
-// One flagship per provider. Each of these was confirmed against this
-// deployment's key: an empty POST came back 400 or 422 naming the fields it
-// wanted, while two invented paths in the same run came back 404. The older
-// variants that used to sit here (Soul, Kling 2.5, Hailuo 2.3, DoP) came out
-// when their successors went in.
-const COST = {
-  '/bytedance/seedance-2.5/text-to-video': VIDEO,
-  '/kling-video/v3.0/std/text-to-video': VIDEO,
-  '/minimax/h3/text-to-video': VIDEO,
-  '/alibaba/wan-3.0-prime/text-to-video': VIDEO,
-  '/higgsfield/cinema-studio/4.0': VIDEO,
-  '/higgsfield/genjutsu/motion-transfer/v1.0': VIDEO,
-  '/recraft/v4.1/text-to-image': IMAGE,
-  '/alibaba/qwen-image-3/text-to-image': IMAGE,
-  '/xai/grok-imagine-image-2.0': IMAGE
-};
+// What a generation costs is no longer a flat number kept here. It is worked
+// out per model and per second from the provider's own rate card, which lives
+// in _lib beside the ledger that spends it. A flat forty credits charged the
+// same for a five-second Kling clip that costs the provider forty cents and a
+// Genjutsu run that cost three dollars and forty-one cents.
+//
+// One flagship per provider. Each was confirmed against this deployment's key:
+// an empty POST came back 400 or 422 naming the fields it wanted, while two
+// invented paths in the same run came back 404. The older variants that used to
+// sit here (Soul, Kling 2.5, Hailuo 2.3, DoP) came out when their successors
+// went in.
 
 // Only these endpoint paths may be called, so a visitor cannot point this
 // function at an arbitrary URL. Add the ones your account actually has.
 // Paths come from Higgsfield's own OpenAPI document, plus the two confirmed by
 // probing this key directly. FLUX Kontext Max was removed: it answers 404
 // model_not_found, so this account cannot call it.
-const ALLOWED_PATHS = new Set(Object.keys(COST));
+const ALLOWED_PATHS = new Set([
+  '/bytedance/seedance-2.5/text-to-video',
+  '/kling-video/v3.0/std/text-to-video',
+  '/minimax/h3/text-to-video',
+  '/alibaba/wan-3.0-prime/text-to-video',
+  '/higgsfield/cinema-studio/4.0',
+  '/higgsfield/genjutsu/motion-transfer/v1.0',
+  '/recraft/v4.1/text-to-image',
+  '/alibaba/qwen-image-3/text-to-image',
+  '/xai/grok-imagine-image-2.0'
+]);
 
 function credentials() {
   // The console now issues ONE key string, so take it verbatim; older
@@ -89,10 +87,19 @@ module.exports = async (req, res) => {
     });
   }
 
+  // The input has to be read before the bill can be worked out: a video is
+  // charged by the second, so its length is part of its price.
+  const input = (body.input && typeof body.input === 'object') ? body.input : {};
+
+  // Motion transfer has no duration of its own \u2014 the output runs as long as
+  // the clip it copies \u2014 so the page measures the uploaded file and sends the
+  // length here. Everything else carries the duration the slider chose.
+  const seconds = Number(input.duration || input.source_seconds || 0);
+
   // Once the ledger exists, generating costs money, so it needs a signed-in
   // account to bill. Before that it stays open, exactly as it was.
   let userId = null;
-  let cost = COST[path] || 0;
+  let cost = L.creditsFor(path, seconds) || 0;
   let owner = false;
   if (L.authReady) {
     userId = L.currentUserId(req);
@@ -115,7 +122,6 @@ module.exports = async (req, res) => {
     }
   }
 
-  const input = (body.input && typeof body.input === 'object') ? body.input : {};
   const prompt = String(input.prompt || '').trim();
   // Motion transfer works from the source clip and stills, so it is the one
   // model that can run without a written prompt.
@@ -146,12 +152,24 @@ module.exports = async (req, res) => {
     const why = badUrl(link);
     if (why) return res.status(400).json({ error: 'bad_source_url', message: 'Check the source links: ' + why + '.' });
   }
-  if (links.length > 6) return res.status(400).json({ error: 'too_many_sources' });
+  // Eight images and the one motion video: the model's own maximum.
+  if (links.length > 9) return res.status(400).json({ error: 'too_many_sources' });
 
   if (motionTransfer && (!input.video_url || !Array.isArray(input.image_urls) || !input.image_urls.length)) {
     return res.status(400).json({
       error: 'missing_sources',
       message: 'Genjutsu needs a link to the motion video and at least one image link.'
+    });
+  }
+
+  // Motion transfer is billed by the second like everything else, but its
+  // length comes from the uploaded clip rather than a slider. Without that
+  // number the price would silently fall back to one second, so refuse the job
+  // instead of running a three-dollar model for the price of one.
+  if (motionTransfer && !(seconds >= 1)) {
+    return res.status(400).json({
+      error: 'missing_source_length',
+      message: 'The length of the motion video is missing, so this run cannot be priced.'
     });
   }
 
