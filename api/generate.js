@@ -102,7 +102,10 @@ module.exports = async (req, res) => {
   // Once the ledger exists, generating costs money, so it needs a signed-in
   // account to bill. Before that it stays open, exactly as it was.
   let userId = null;
-  let cost = L.creditsFor(path, seconds) || 0;
+  // The price depends on the quality asked for, not only the model, so the
+  // resolution travels with the request. When a model sends none, creditsFor
+  // bills its dearest tier rather than assume the cheapest.
+  let cost = L.creditsFor(path, seconds, input.resolution) || 0;
   let owner = false;
   if (L.authReady) {
     userId = L.currentUserId(req);

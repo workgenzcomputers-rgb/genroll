@@ -188,37 +188,35 @@ function isOwner(email) {
 
 // --- what a generation costs --------------------------------------------------
 //
-// Every price here is Higgsfield's own published rate for that endpoint, read
-// from its catalogue on 2026-09-28. They are the LIST prices, not the
-// promotional ones on the dashboard that day: every one of those discounts
-// carries discount_expires_at = 2026-10-01, and a bill built on a rate that
-// dies in two days would start losing money the moment it did.
+// Every figure here is Higgsfield's own published rate for that endpoint at
+// that setting, read from its model pages on 2026-09-28. They are LIST prices:
+// the discounts running that week all carry discount_expires_at of 1 October,
+// and a bill built on a rate that dies in two days starts losing money the
+// moment it does.
 //
-// A flat forty credits a video used to stand in for all of this. It was wrong
-// in both directions at once — Kling costs a fifth of that, and one Genjutsu
-// clip cost $3.41 against forty rupees taken.
-//
-// Where the catalogue says "from", the rate is the cheapest tier that model
-// sells; a higher resolution can cost more than this, so these are floors.
+// These are per resolution, and that is the point. The catalogue shows one
+// "from" price per model, which is the cheapest tier it sells, and pricing off
+// that number undercharged badly wherever the page offered anything better:
+// Genjutsu is $0.318 a second at 480p but $0.681 at 720p, which is the only
+// tier this site sells, and Seedance and Wan double and quadruple the same way.
+// A model with no resolution setting has a flat rate instead.
 const RATES = {
-  '/bytedance/seedance-2.5/text-to-video':     { usd: 0.2057, per: 'second', from: true },
-  '/kling-video/v3.0/std/text-to-video':       { usd: 0.084,  per: 'second' },
-  // Omni is quoted at two tiers: $0.084 a second for a one-second clip and
-  // $0.112 for the five- and ten-second ones. Five and ten are the only lengths
-  // it accepts, so the higher tier is the one that can actually be billed.
-  '/kling-video/omni/first-last-frame':        { usd: 0.112,  per: 'second' },
-  '/minimax/h3/text-to-video':                 { usd: 0.13,   per: 'second' },
-  '/alibaba/wan-3.0-prime/text-to-video':      { usd: 0.068,  per: 'second', from: true },
-  '/higgsfield/cinema-studio/4.0':             { usd: 0.2057, per: 'second', from: true },
-  '/higgsfield/genjutsu/motion-transfer/v1.0': { usd: 0.318,  per: 'second', from: true },
-  // Marketing Studio publishes a price for its 1k tier only, so only 1k is
-  // offered on the page; 2k and 4k would be sold at a rate nobody has stated.
-  '/marketing-studio/image':                   { usd: 0.0162, per: 'image', from: true },
-  // Soul 2 prices its 720p tier only, so 720p is the tier the page sells.
-  '/higgsfield-ai/soul/v2/standard':           { usd: 0.0032, per: 'image', from: true },
-  '/recraft/v4.1/text-to-image':               { usd: 0.035,  per: 'image' },
-  '/alibaba/qwen-image-3/text-to-image':       { usd: 0.04,   per: 'image', from: true },
-  '/xai/grok-imagine-image-2.0':               { usd: 0.04,   per: 'image', from: true }
+  '/bytedance/seedance-2.5/text-to-video':     { per: 'second', tiers: { '480p': 0.2056, '720p': 0.4622, '1080p': 1.1372 } },
+  '/kling-video/v3.0/std/text-to-video':       { per: 'second', flat: 0.084 },
+  // Omni is quoted at $0.084 a second for a one-second clip and $0.112 for the
+  // five- and ten-second ones. Five and ten are the only lengths it takes.
+  '/kling-video/omni/first-last-frame':        { per: 'second', flat: 0.112 },
+  '/minimax/h3/text-to-video':                 { per: 'second', flat: 0.13 },
+  '/alibaba/wan-3.0-prime/text-to-video':      { per: 'second', tiers: { '480p': 0.068, '720p': 0.14, '1080p': 0.28 } },
+  // Cinema Studio sends no resolution of its own, so it renders at the
+  // provider's default of 720p and is billed at that tier.
+  '/higgsfield/cinema-studio/4.0':             { per: 'second', tiers: { '480p': 0.2057, '720p': 0.4623 } },
+  '/higgsfield/genjutsu/motion-transfer/v1.0': { per: 'second', tiers: { '480p': 0.318, '720p': 0.681, '1080p': 1.632 } },
+  '/recraft/v4.1/text-to-image':               { per: 'image', flat: 0.035 },
+  '/alibaba/qwen-image-3/text-to-image':       { per: 'image', tiers: { '1k': 0.04, '2k': 0.075 } },
+  '/xai/grok-imagine-image-2.0':               { per: 'image', tiers: { '1k': 0.04, '2k': 0.08 } },
+  '/marketing-studio/image':                   { per: 'image', tiers: { '1k': 0.0162, '2k': 0.0222, '4k': 0.7219 } },
+  '/higgsfield-ai/soul/v2/standard':           { per: 'image', tiers: { '720p': 0.0032, '1080p': 0.0057 } }
 };
 
 const USD_INR = Number(process.env.USD_INR || 95.791);
@@ -229,32 +227,54 @@ function rateFor(path) {
   return Object.prototype.hasOwnProperty.call(RATES, path) ? RATES[path] : null;
 }
 
+// The dollar rate for one unit at one setting. An unknown or missing
+// resolution bills at the model's dearest tier: guessing low here would sell
+// the difference, and the page always names the tier it is quoting.
+function usdFor(path, resolution) {
+  const rate = rateFor(path);
+  if (!rate) return null;
+  if (typeof rate.flat === 'number') return rate.flat;
+  const tiers = rate.tiers || {};
+  const key = String(resolution || '').toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(tiers, key)) return tiers[key];
+  let worst = 0;
+  for (const name in tiers) if (tiers[name] > worst) worst = tiers[name];
+  return worst || null;
+}
+
 // One credit is one rupee, so a charge is the provider's dollar cost converted
 // and marked up. Rounded up, because a fraction of a credit cannot be taken and
 // rounding down would sell the remainder at a loss.
-function creditsFor(path, seconds) {
+function creditsFor(path, seconds, resolution) {
+  const usd = usdFor(path, resolution);
   const rate = rateFor(path);
-  if (!rate) return null;
+  if (usd == null || !rate) return null;
   let units = 1;
   if (rate.per === 'second') {
-    units = Math.round(Number(seconds));
+    units = Math.ceil(Number(seconds));
     if (!isFinite(units) || units < 1) units = 1;
     if (units > MAX_SECONDS) units = MAX_SECONDS;
   }
-  return Math.ceil(rate.usd * units * USD_INR * MARGIN);
+  return Math.ceil(usd * units * USD_INR * MARGIN);
 }
 
-// What the page needs to quote a price before anything is spent. The same
-// numbers the server bills with, so the quote cannot drift from the charge.
+// What the page needs to quote a price before anything is spent: the same
+// numbers the server bills with, per tier, so a quote cannot drift from a
+// charge. Sent at full precision and rounded only for display \u2014 rounding here
+// first made the page quote a credit more than the ledger took on long clips.
 function priceTable() {
   const out = {};
+  const toCredits = (usd) => usd * USD_INR * MARGIN;
   for (const path in RATES) {
     if (!Object.prototype.hasOwnProperty.call(RATES, path)) continue;
-    out[path] = {
-      per: RATES[path].per,
-      from: Boolean(RATES[path].from),
-      credits: Math.ceil(RATES[path].usd * USD_INR * MARGIN * 100) / 100
-    };
+    const rate = RATES[path];
+    const entry = { per: rate.per };
+    if (typeof rate.flat === 'number') entry.credits = toCredits(rate.flat);
+    else {
+      entry.tiers = {};
+      for (const name in rate.tiers) entry.tiers[name] = toCredits(rate.tiers[name]);
+    }
+    out[path] = entry;
   }
   return { rates: out, usdInr: USD_INR, margin: MARGIN, maxSeconds: MAX_SECONDS };
 }
