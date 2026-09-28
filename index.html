@@ -992,7 +992,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
   // Motion transfer is the one model here that takes files rather than only
   // words. The uploaded links live here between the picker and the request.
-  var SOURCES = { video: null, images: [], seconds: null };
+  var SOURCES = { video: null, images: [], seconds: null, firstFrame: null, lastFrame: null };
 
   // The job that is running right now, if any. It gets a tile of its own at
   // the head of the Generations grid so the wait has somewhere to live.
@@ -1162,6 +1162,26 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       source: DOC + '/higgsfield/genjutsu/motion-transfer/v1.0/api-reference',
       references: { image: 1, unverified: true, source: DOC + '/higgsfield/genjutsu/motion-transfer/v1.0/api-reference',
         checked: '2026-09-27', note: 'Listed in the reference. Unlike the others it was not in the endpoint probe, so it is unconfirmed against the live key.' }
+
+    }, {
+      id: 'kling-omni',
+      name: 'Kling Omni',
+      provider: 'Kling \u00B7 via Higgsfield',
+      status: 'partial',
+      modes: ['generate'],
+      endpoint: '/kling-video/omni/first-last-frame',
+      ratios: ['16:9', '9:16', '1:1'],
+      outputSeconds: { min: 5, max: 10, step: 5 },
+      fixedQuality: 'Set by the model',
+      send: { duration: true, aspect_ratio: true, frames: true, extra: { mode: 'pro' } },
+      limits: [
+        'Animates from a start frame you upload, optionally towards an end frame, guided by the prompt.',
+        'Five or ten seconds \u2014 those are the only two lengths it takes.',
+        'Runs in pro mode. Uploads are kept for seven days and then deleted.'
+      ],
+      source: DOC + '/kling-video/omni/first-last-frame/api-reference',
+      references: { image: 1, unverified: true, source: DOC + '/kling-video/omni/first-last-frame/api-reference',
+        checked: '2026-09-28', note: 'Parameters read from its own API reference. Not yet run against the live key.' }
 
     }]
   };
@@ -1406,16 +1426,47 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       return blob.url;
     }
 
+    // What a model needs uploaded, if anything. One entry per file field; the
+    // key is where its link waits until Generate is pressed. Two models take
+    // files and they take different ones, so the fields are described rather
+    // than hard-coded twice.
+    function sourceSpec(model) {
+      var send = model && model.send;
+      if (!send) return null;
+      if (send.sources) return [
+        { key: 'video', id: 'src-video', many: false, measure: true,
+          label: 'Motion video (mp4, mov or webm)',
+          accept: 'video/mp4,video/quicktime,video/webm' },
+        { key: 'images', id: 'src-images', many: true,
+          label: 'Images to move (jpg, png or webp)',
+          accept: 'image/jpeg,image/png,image/webp' }
+      ];
+      if (send.frames) return [
+        { key: 'firstFrame', id: 'src-first', many: false,
+          label: 'Start frame (jpg, png or webp)',
+          accept: 'image/jpeg,image/png,image/webp' },
+        { key: 'lastFrame', id: 'src-last', many: false, optional: true,
+          label: 'End frame \u2014 optional, the shot ends here',
+          accept: 'image/jpeg,image/png,image/webp' }
+      ];
+      return null;
+    }
+
+    function clearSource(spec) {
+      SOURCES[spec.key] = spec.many ? [] : null;
+      if (spec.measure) SOURCES.seconds = null;
+    }
+
     // Files upload as soon as they are chosen rather than on Generate, so the
     // wait happens while the prompt is still being written.
-    function wire(input, state, many) {
+    function wire(input, state, spec) {
       input.onchange = async function () {
         var files = Array.prototype.slice.call(input.files || []);
-        if (many) SOURCES.images = [];
-        else { SOURCES.video = null; SOURCES.seconds = null; try { paintCost(); } catch (e) {} }
+        clearSource(spec);
+        try { paintCost(); } catch (e) {}
 
         if (!files.length) { say(state, 'Nothing chosen yet.'); return; }
-        if (many && files.length > 8) {
+        if (spec.many && files.length > 8) {
           say(state, 'Eight images at most.', 'bad');
           input.value = '';
           return;
@@ -1427,42 +1478,47 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
           for (var i = 0; i < files.length; i++) {
             urls.push(await sendOne(files[i], state, i + 1, files.length));
           }
-          if (many) {
-            SOURCES.images = urls;
+          if (spec.many) {
+            SOURCES[spec.key] = urls;
             say(state, urls.length === 1 ? 'One image ready.' : urls.length + ' images ready.', 'ok');
           } else {
-            SOURCES.video = urls[0];
-            SOURCES.seconds = await videoSeconds(files[0]);
-            say(state, SOURCES.seconds
-              ? 'Video ready \u2014 ' + Math.round(SOURCES.seconds) + ' seconds.'
-              : 'Video ready. Its length could not be read here, so the run is priced at the maximum.', 'ok');
-            try { paintCost(); } catch (e) {}
+            SOURCES[spec.key] = urls[0];
+            if (spec.measure) {
+              SOURCES.seconds = await videoSeconds(files[0]);
+              say(state, SOURCES.seconds
+                ? 'Video ready \u2014 ' + Math.round(SOURCES.seconds) + ' seconds.'
+                : 'Video ready. Its length could not be read here, so the run is priced at the maximum.', 'ok');
+            } else {
+              say(state, 'Ready.', 'ok');
+            }
           }
+          try { paintCost(); } catch (e) {}
         } catch (err) {
-          if (many) SOURCES.images = []; else SOURCES.video = null;
+          clearSource(spec);
           say(state, err.message || 'That upload did not go through.', 'bad');
           input.value = '';
+          try { paintCost(); } catch (e) {}
         } finally {
           input.disabled = false;
         }
       };
     }
 
-    function sourceBlock(id, text, accept, many) {
+    function sourceBlock(spec) {
       var wrap = document.createElement('div');
       wrap.className = 'field wide source-field';
-      wrap.id = id + '-field';
+      wrap.id = spec.id + '-field';
 
       var label = document.createElement('label');
       label.className = 'field-label';
-      label.setAttribute('for', id);
-      label.textContent = text;
+      label.setAttribute('for', spec.id);
+      label.textContent = spec.label;
 
       var input = document.createElement('input');
       input.type = 'file';
-      input.id = id;
-      input.accept = accept;
-      if (many) input.multiple = true;
+      input.id = spec.id;
+      input.accept = spec.accept;
+      if (spec.many) input.multiple = true;
 
       var state = document.createElement('div');
       state.className = 'source-state';
@@ -1471,35 +1527,39 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       wrap.appendChild(label);
       wrap.appendChild(input);
       wrap.appendChild(state);
-      wire(input, state, many);
+      wire(input, state, spec);
       return wrap;
     }
 
     // Adding the fields changes #model-fields, which wakes the observer again,
     // so this has to be a no-op the second time round.
+    var shownSpec = null;
+
     function syncSources() {
       var model = null;
       try { model = currentModel(); } catch (e) {}
-      var wants = Boolean(model && model.send && model.send.sources);
-      var already = document.getElementById('src-video-field');
+      var spec = sourceSpec(model);
+      var signature = spec ? spec.map(function (s) { return s.id; }).join(',') : '';
 
-      if (!wants) {
-        if (already) {
-          already.remove();
-          var images = document.getElementById('src-images-field');
-          if (images) images.remove();
-          SOURCES.video = null;
-          SOURCES.images = [];
-        }
-        return;
+      if (signature === shownSpec) return;
+
+      // A different model wants different files, so the old fields and the old
+      // uploads both stop describing what is on screen.
+      if (shownSpec) {
+        shownSpec.split(',').forEach(function (id) {
+          var el = document.getElementById(id + '-field');
+          if (el) el.remove();
+        });
       }
-      if (already) return;
-
-      // A new model means the old uploads no longer describe what is on screen.
       SOURCES.video = null;
       SOURCES.images = [];
-      box.appendChild(sourceBlock('src-video', 'Motion video (mp4, mov or webm)', 'video/mp4,video/quicktime,video/webm', false));
-      box.appendChild(sourceBlock('src-images', 'Images to move (jpg, png or webp)', 'image/jpeg,image/png,image/webp', true));
+      SOURCES.firstFrame = null;
+      SOURCES.lastFrame = null;
+      SOURCES.seconds = null;
+      shownSpec = signature;
+      if (!spec) return;
+
+      spec.forEach(function (s) { box.appendChild(sourceBlock(s)); });
     }
 
     // Each step is a no-op once it has been done, so the mutations this makes
@@ -1898,6 +1958,11 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       input.source_seconds = Math.round(SOURCES.seconds || ((CFG && CFG.pricing && CFG.pricing.maxSeconds) || 30));
     }
 
+    if (send.frames) {
+      if (SOURCES.firstFrame) input.first_frame_url = SOURCES.firstFrame;
+      if (SOURCES.lastFrame) input.last_frame_url = SOURCES.lastFrame;
+    }
+
     if (send.extra) {
       for (var key in send.extra) {
         if (Object.prototype.hasOwnProperty.call(send.extra, key)) input[key] = send.extra[key];
@@ -1993,6 +2058,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     if (!prompt && !needsSources) { toast('Write a prompt first.'); promptEl.focus(); return; }
     if (needsSources && !SOURCES.video) { toast('Choose the motion video first.'); return; }
     if (needsSources && !SOURCES.images.length) { toast('Choose at least one image to move.'); return; }
+
+    // The end frame is optional on this model; the start frame is not.
+    var needsFrames = Boolean(model && model.send && model.send.frames);
+    if (needsFrames && !SOURCES.firstFrame) { toast('Choose the start frame first.'); return; }
 
     var btn = q('#generate');
     btn.disabled = true;
