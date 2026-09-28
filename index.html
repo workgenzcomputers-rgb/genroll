@@ -402,7 +402,7 @@ header{backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20
 <aside class="media glass" aria-label="Media library"><div class="media-header"><h3>Your media <span class="counter" id="media-count">0</span></h3><svg class="icon muted"><use href="#i-grid"/></svg></div><div class="media-body"><div class="media-tabs"><button data-media="uploads" class="active" aria-pressed="true">Uploaded</button><button data-media="generations" aria-pressed="false">Generations</button></div><div class="filters" aria-label="Filter media"><button data-filter="all" class="active" aria-pressed="true">All</button><button data-filter="image" aria-pressed="false">Image</button><button data-filter="video" aria-pressed="false">Video</button><button data-filter="audio" aria-pressed="false">Audio</button></div><div class="drop-zone" id="drop-zone"><div class="upload-icon"><svg><use href="#i-upload"/></svg></div><p>Drop your files here, or <button id="browse">browse files</button></p><small>Images, video &amp; audio · 50 MB per file in this preview</small><input type="file" id="media-upload" accept="image/*,video/*,audio/*" multiple hidden></div><div id="media-content"></div><p class="local-note">Private to this browser. Nothing is sent to a provider.</p></div></aside></div>
 </section>
 <section id="page-models" hidden aria-label="Model catalog"><div class="section-head"><div class="eyebrow">The creative engine room</div><h1>EVERY <span class="accent">Model</span></h1><p>Every model configured in this preview, with its source and limits. Includes Google, OpenAI / ChatGPT image models, ByteDance Seedream and Seedance, Kling AI, MiniMax Hailuo, and more.</p></div><div class="catalog-note glass"><div class="row"><span class="status verified">Verified</span><span class="status partial">Partial</span><span class="status unverified">Unverified</span></div><p class="note">Verified means the listed capabilities were checked against official documentation on 19 Sep 2026. Partial means some limits remain unconfirmed. Partial model entries intentionally omit unconfirmed controls. Provider-specific API identifiers are shown only where confirmed. No provider is connected. Genroll rates and account availability are unverified.</p></div><div id="catalog"></div></section>
-<section id="page-plans" hidden aria-label="Credits"><div class="section-head"><div class="eyebrow">Pay for what you create</div><h1>YOUR <span class="accent">Credits</span></h1><p>Small top-ups. Clear pricing. One credit balance for images and videos.</p></div><div id="plans-grid" class="plans-grid"></div><div class="calculator glass"><div><div class="eyebrow">Start with any budget</div><h3>Choose your credits</h3><p class="note">1 credit = ₹1. No monthly subscription.</p><label class="field" for="budget"><span class="field-label">Top-up amount · ₹</span><input id="budget" type="number" min="10" max="50000" step="1" value="100"></label><input type="range" id="budget-range" min="10" max="50000" step="1" value="100" aria-label="Credit top-up amount"><p class="note">All available image and video models use the same balance. The credit cost depends on the model and settings.</p></div><div class="calc-result"><span class="eyebrow">Your top-up</span><strong id="budget-total"></strong><p id="credit-total"></p><p class="note">Credit charge = provider cost in ₹ × 1.10. For example, a ₹10 provider cost uses 11 credits.</p><button id="topup" disabled style="width:100%;margin-top:20px">Top-ups coming soon</button><p class="note" id="topup-note" style="margin-top:10px"></p></div></div><p class="disclosure"><strong style="color:#e3e7f6">Simple, usage-based pricing.</strong> Each generation uses credits; model access does not include free usage. A 10% markup is added to the provider cost converted to rupees. Displayed video estimates use the supplied Higgsfield promotional rates and ₹95.791/USD (18 Sep 2026 reference), plus 10% markup. Estimates are rounded to 0.01 credits. Final quotes depend on settings, offer availability and the actual conversion rate. Taxes, payment fees and credit expiry terms will be disclosed before paid top-ups launch. <span id="live-note">This preview does not accept payments or generate media.</span></p></section>
+<section id="page-plans" hidden aria-label="Credits"><div class="section-head"><div class="eyebrow">Pay for what you create</div><h1>YOUR <span class="accent">Credits</span></h1><p>Small top-ups. Clear pricing. One credit balance for images and videos.</p></div><div id="plans-grid" class="plans-grid"></div><div class="calculator glass"><div><div class="eyebrow">Start with any budget</div><h3>Choose your credits</h3><p class="note">1 credit = ₹1. No monthly subscription.</p><label class="field" for="budget"><span class="field-label">Top-up amount · ₹</span><input id="budget" type="number" min="10" max="50000" step="1" value="100"></label><input type="range" id="budget-range" min="10" max="50000" step="1" value="100" aria-label="Credit top-up amount"><p class="note">All available image and video models use the same balance. The credit cost depends on the model and settings.</p></div><div class="calc-result"><span class="eyebrow">Your top-up</span><strong id="budget-total"></strong><p id="credit-total"></p><p class="note">Credit charge = provider cost in ₹ × 1.20. For example, a ₹10 provider cost uses 12 credits.</p><button id="topup" disabled style="width:100%;margin-top:20px">Top-ups coming soon</button><p class="note" id="topup-note" style="margin-top:10px"></p></div></div><p class="disclosure"><strong style="color:#e3e7f6">Simple, usage-based pricing.</strong> Each generation uses credits; model access does not include free usage. A 20% markup is added to the provider cost converted to rupees. Every rate comes from Higgsfield’s published catalogue on 28 Sep 2026, converted at ₹95.791/USD. They are its list prices, not the promotional ones running that week: those discounts expire on 1 Oct 2026, and a price is no use if it stops being true two days later. Where a model sells more than one quality tier this is the cheapest of them, so a higher setting can cost more. The figure beside the Generate button is produced by the same code that takes the credits, so the quote and the charge cannot disagree. Taxes, payment fees and credit expiry terms will be disclosed before paid top-ups launch. <span id="live-note">This preview does not accept payments or generate media.</span></p></section>
 <section id="page-elements" hidden aria-label="Elements library"><div class="section-head"><div class="eyebrow">Keep your creative DNA close</div><h1>YOUR <span class="accent">Elements</span></h1><p>Characters, styles, objects. Save a reference once, then bring it into your next prompt with an @mention.</p></div><div class="element-layout"><form id="element-form" class="element-form glass"><h3>A new familiar face.</h3><label class="field"><span class="field-label">Element name</span><input id="element-name" type="text" placeholder="e.g. Amber character" maxlength="40" required pattern="[A-Za-z0-9][A-Za-z0-9 _-]*" title="Use letters, numbers, spaces, hyphens or underscores; begin with a letter or number."></label><label class="field"><span class="field-label">Reference image or video</span><input id="element-file" type="file" accept="image/*,video/*" required></label><button class="primary" type="submit">＋ Save element</button><p class="note" id="storage-note">Saved on this device in this browser. Up to 50 MB per file. References are not sent anywhere.</p></form><div class="element-library" id="element-library"></div></div></section>
 <footer><span>GENROLL STUDIO <span style="color:#54617d">/</span> A SPACE FOR WHAT'S NEXT.</span><span>PREVIEW EDITION · SEPTEMBER 2026</span></footer>
 </main><div id="toast" role="status" class="toast" aria-live="polite"></div><dialog id="media-dialog"><div class="row between"><h3 id="dialog-title"></h3><button id="close-dialog" aria-label="Close media preview">✕</button></div><div id="dialog-content"></div></dialog>
@@ -918,7 +918,7 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
   // Motion transfer is the one model here that takes files rather than only
   // words. The uploaded links live here between the picker and the request.
-  var SOURCES = { video: null, images: [] };
+  var SOURCES = { video: null, images: [], seconds: null };
 
   // The job that is running right now, if any. It gets a tile of its own at
   // the head of the Generations grid so the wait has somewhere to live.
@@ -1296,6 +1296,23 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       return loading;
     }
 
+    // Motion transfer is billed by the second and its output lasts as long as
+    // the clip it copies, so the file itself is the only honest source for the
+    // price. Read it rather than assume.
+    function videoSeconds(file) {
+      return new Promise(function (resolve) {
+        var url = URL.createObjectURL(file);
+        var probe = document.createElement('video');
+        probe.preload = 'metadata';
+        probe.onloadedmetadata = function () {
+          URL.revokeObjectURL(url);
+          resolve(isFinite(probe.duration) && probe.duration > 0 ? probe.duration : null);
+        };
+        probe.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+        probe.src = url;
+      });
+    }
+
     function say(state, text, kind) {
       state.textContent = text;
       state.className = 'source-state' + (kind ? ' ' + kind : '');
@@ -1320,11 +1337,12 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     function wire(input, state, many) {
       input.onchange = async function () {
         var files = Array.prototype.slice.call(input.files || []);
-        if (many) SOURCES.images = []; else SOURCES.video = null;
+        if (many) SOURCES.images = [];
+        else { SOURCES.video = null; SOURCES.seconds = null; try { paintCost(); } catch (e) {} }
 
         if (!files.length) { say(state, 'Nothing chosen yet.'); return; }
-        if (many && files.length > 4) {
-          say(state, 'Four images at most.', 'bad');
+        if (many && files.length > 8) {
+          say(state, 'Eight images at most.', 'bad');
           input.value = '';
           return;
         }
@@ -1340,7 +1358,11 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
             say(state, urls.length === 1 ? 'One image ready.' : urls.length + ' images ready.', 'ok');
           } else {
             SOURCES.video = urls[0];
-            say(state, 'Video ready.', 'ok');
+            SOURCES.seconds = await videoSeconds(files[0]);
+            say(state, SOURCES.seconds
+              ? 'Video ready \u2014 ' + Math.round(SOURCES.seconds) + ' seconds.'
+              : 'Video ready. Its length could not be read here, so the run is priced at the maximum.', 'ok');
+            try { paintCost(); } catch (e) {}
           }
         } catch (err) {
           if (many) SOURCES.images = []; else SOURCES.video = null;
@@ -1408,13 +1430,25 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
 
     // Each step is a no-op once it has been done, so the mutations this makes
     // settle on the next pass instead of feeding back into the observer.
+    // renderFields() rebuilds the slider on every model change and points its
+    // oninput at the page's own old estimate. Add a listener behind that one so
+    // dragging the slider repaints the real price over the guess.
+    function bindSeconds() {
+      var slider = document.getElementById('output-seconds');
+      if (!slider || slider.__costBound) return;
+      slider.__costBound = true;
+      slider.addEventListener('input', function () { try { paintCost(); } catch (e) {} });
+    }
+
     new MutationObserver(function () {
       fixFields();
       try { syncSources(); } catch (e) {}
+      try { bindSeconds(); } catch (e) {}
       try { paintCost(); } catch (e) {}
     }).observe(box, { childList: true });
     try { fixFields(); } catch (e) {}
     try { syncSources(); } catch (e) {}
+    try { bindSeconds(); } catch (e) {}
   })();
 
   // On every other site the wordmark is the way back to the start, so make it
@@ -1638,20 +1672,47 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   }
 
   // What this click will cost, written beside the button that spends it. The
-  // figures come from /api/config, which reads the same COST_IMAGE and
-  // COST_VIDEO the server charges with, so the label cannot promise one price
-  // and the ledger take another. The page's own estimate was a guess from a
-  // pricing table these models do not carry, which is why it read "credit
-  // quote pending".
+  // figures come from /api/config, built by the same function the server bills
+  // with, so the label cannot promise one price and the ledger take another.
+  //
+  // It used to be one flat number for every video. That charged the same for a
+  // five-second Kling clip and a Genjutsu run costing eight times as much, so
+  // it is now the model's own rate multiplied by the seconds being asked for.
   var BALANCE = null;
   var OWNER = false;
 
+  function rateFor(model) {
+    var pricing = CFG && CFG.pricing;
+    if (!pricing || !pricing.rates || !model || !model.endpoint) return null;
+    return pricing.rates[model.endpoint] || null;
+  }
+
+  // How many seconds this run will be billed for. The slider says it for the
+  // models that have one. Motion transfer has no slider \u2014 its output lasts as
+  // long as the clip it copies \u2014 so the measured length of that upload is the
+  // honest number, and until a clip is chosen there is nothing to measure.
+  function quotedSeconds(model) {
+    var cap = (CFG && CFG.pricing && CFG.pricing.maxSeconds) || 30;
+    var n;
+    if (model && model.send && model.send.sources) {
+      if (!SOURCES.seconds) return null;
+      n = SOURCES.seconds;
+    } else {
+      var el = q('#output-seconds');
+      n = el ? Number(el.value) : 0;
+    }
+    n = Math.round(n);
+    if (!isFinite(n) || n < 1) n = 1;
+    return Math.min(n, cap);
+  }
+
   function costFor(model) {
-    var costs = (CFG && CFG.costs) || {};
-    var id = model && model.id;
-    var isVideo = (LIVE_MODELS.video || []).some(function (m) { return m.id === id; });
-    var n = isVideo ? costs.video : costs.image;
-    return (typeof n === 'number' && isFinite(n)) ? n : null;
+    var rate = rateFor(model);
+    if (!rate) return null;
+    if (rate.per !== 'second') return Math.ceil(rate.credits);
+    var seconds = quotedSeconds(model);
+    if (seconds == null) return null;
+    return Math.ceil(rate.credits * seconds);
   }
 
   function paintCost() {
@@ -1659,9 +1720,6 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     if (!small) return;
     var model = null;
     try { model = currentModel(); } catch (e) {}
-    var cost = costFor(model);
-    if (cost == null) return;
-
     // The owner runs on the provider key directly, so quoting a price at
     // them would describe a charge that never happens.
     if (OWNER) {
@@ -1669,7 +1727,19 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       return;
     }
 
+    var rate = rateFor(model);
+    if (!rate) return;
+
+    var cost = costFor(model);
+    if (cost == null) {
+      // Only motion transfer reaches here: the price is real but unknowable
+      // until the clip that sets its length has been chosen.
+      small.textContent = rate.credits + ' credits a second \u00B7 choose the motion video to see the total';
+      return;
+    }
+
     var line = cost + (cost === 1 ? ' credit' : ' credits');
+    if (rate.per === 'second') line += ' \u00B7 ' + quotedSeconds(model) + 's at ' + rate.credits + '/s';
     if (BALANCE != null) {
       line += ' \u00B7 you have ' + BALANCE;
       if (BALANCE < cost) line += ', top up to run this';
@@ -1727,6 +1797,10 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
     if (send.sources) {
       if (SOURCES.video) input.video_url = SOURCES.video;
       if (SOURCES.images.length) input.image_urls = SOURCES.images.slice();
+      // The server prices the run from this, so when the clip could not be
+      // measured send the cap rather than nothing: too much is refundable,
+      // too little is not.
+      input.source_seconds = Math.round(SOURCES.seconds || ((CFG && CFG.pricing && CFG.pricing.maxSeconds) || 30));
     }
 
     if (send.extra) {
