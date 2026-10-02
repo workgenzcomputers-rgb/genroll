@@ -61,7 +61,9 @@ a,.drop-zone button,.audio-tabs .active,.allocations b,.ratio-options button[ari
 
 .profile-shell{display:flex;align-items:center;gap:12px}.credit-circle{width:54px;height:54px;border:1.5px solid #ff8a3d;border-radius:50%;background:#ff8a3d0b;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;flex-shrink:0;color:#ff8a3d;line-height:1.1}.credit-circle strong{font:600 18px/1.1 var(--sans)}.credit-circle span{font:10px/1.3 var(--mono)}.credit-circle:hover{background:#ff8a3d20}.credit-circle:focus-visible{outline:2px solid #ff8a3d;outline-offset:3px}.credit-circle[data-owner]{width:auto;border-radius:999px;padding:0 16px;flex-direction:row}.credit-circle[data-owner] strong{font:600 11px/1.1 var(--mono);letter-spacing:.14em}.credit-circle[data-owner] span{display:none}
 
-.source-field{display:flex;flex-direction:column;gap:6px}.source-field input[type=file]{font:11px var(--mono);color:var(--text);padding:10px;border:1px dashed var(--line);border-radius:8px;background:#ff8a3d08;cursor:pointer;width:100%;min-width:0}.source-state{font:11px/1.5 var(--mono);color:var(--muted);min-height:16px;word-break:break-word}.source-state.ok{color:var(--orange)}.source-state.bad{color:#ff6b6b}
+.source-field{display:flex;flex-direction:column;gap:6px}.source-field input[type=file]{font:11px var(--mono);color:var(--text);padding:10px;border:1px dashed var(--line);border-radius:8px;background:#ff8a3d08;cursor:pointer;width:100%;min-width:0}.source-state{font:11px/1.5 var(--mono);color:var(--muted);min-height:16px;word-break:break-word}.source-state.ok{color:var(--orange)}.source-state.bad{color:#ff6b6b}.source-state.busy{color:var(--orange)}
+.source-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}.source-preview img,.source-preview video{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:#0b0e1f;display:block}.source-preview video{cursor:pointer}
+.source-bar{height:4px;border-radius:999px;background:#ffffff14;overflow:hidden}.source-bar span{display:block;height:100%;width:0;background:var(--orange);transition:width .18s ease}
 
 .media-card.pending{border-color:#ff8a3d55;background:#ff8a3d08}.media-card.pending.failed{border-color:#ff6b6b55;background:#ff6b6b0a}.media-card.pending.failed .pending-thumb{aspect-ratio:auto;min-height:150px;background:none;justify-content:center}.media-card.pending.failed strong{color:#ff8e8e}.media-card.pending.failed small{color:#d7c3c6;font:11px/1.6 var(--mono);word-break:break-word}.pending-thumb{aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:10px;text-align:center;background:repeating-linear-gradient(115deg,#ff8a3d12 0 13px,#ff8a3d05 13px 26px)}.pending-thumb strong{font-size:13px;color:var(--orange)}.pending-thumb small{font:10px/1.45 var(--mono);color:var(--muted)}.pending-spin{width:22px;height:22px;border-radius:50%;border:2px solid #ff8a3d33;border-top-color:var(--orange);animation:pending-turn .9s linear infinite}@keyframes pending-turn{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.pending-spin{animation:none}}@media(max-width:560px){.profile-shell{gap:8px}.credit-circle{width:44px;height:44px}.credit-circle strong{font-size:16px}.credit-circle span{font-size:9px}}
 </style>
@@ -1443,15 +1445,70 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       });
     }
 
+    // The status line under each picker. A file that is on its way, a file that
+    // has arrived, and a file that was refused all have to be told apart at a
+    // glance, so each one gets its own look rather than a sentence.
     function say(state, text, kind) {
       state.textContent = text;
       state.className = 'source-state' + (kind ? ' ' + kind : '');
     }
 
-    async function sendOne(file, state, index, total) {
+    function setProgress(wrap, percent) {
+      var bar = wrap.querySelector('.source-bar span');
+      if (!bar) return;
+      wrap.querySelector('.source-bar').hidden = percent == null;
+      if (percent != null) bar.style.width = Math.max(0, Math.min(100, percent)) + '%';
+    }
+
+    // Once a file is up, show it rather than describe it. A still for an image,
+    // and for video the frame a tenth of a second in, which plays on hover the
+    // same way a finished generation does.
+    function showPreview(wrap, url, kind, label) {
+      var box = wrap.querySelector('.source-preview');
+      if (!box) return;
+      box.innerHTML = '';
+      if (!url) { box.hidden = true; return; }
+      box.hidden = false;
+
+      var media;
+      if (kind === 'video') {
+        media = document.createElement('video');
+        media.src = url + '#t=0.1';
+        media.muted = true;
+        media.loop = true;
+        media.playsInline = true;
+        media.preload = 'metadata';
+        media.addEventListener('mouseenter', function () {
+          var p = media.play();
+          if (p && p.catch) p.catch(function () {});
+        });
+        media.addEventListener('mouseleave', function () {
+          media.pause();
+          try { media.currentTime = 0.1; } catch (e) {}
+        });
+      } else {
+        media = document.createElement('img');
+        media.src = url;
+        media.alt = label || 'Uploaded reference';
+        media.loading = 'lazy';
+      }
+      box.appendChild(media);
+    }
+
+    function addPreview(wrap, url, kind, label) {
+      var box = wrap.querySelector('.source-preview');
+      if (box) box.hidden = false;
+      var had = box ? box.innerHTML : '';
+      showPreview(wrap, url, kind, label);
+      if (had && box) box.insertAdjacentHTML('afterbegin', had);
+    }
+
+    async function sendOne(file, state, wrap, index, total) {
       var client = await uploader();
       var of = total > 1 ? ' (' + index + ' of ' + total + ')' : '';
-      say(state, 'Uploading ' + file.name + of);
+      say(state, 'Uploading ' + file.name + of, 'busy');
+      setProgress(wrap, 0);
+
       // The provider fetches this link itself, and a name with spaces or
       // punctuation arrives percent-encoded. Two motion-transfer jobs died in
       // three seconds on a clip called "meri kyu nahi 2.mp4" while the same
@@ -1464,53 +1521,28 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         .slice(0, 60)
         .toLowerCase() || 'file';
       var ext = (file.name.match(/\.[^.]+$/) || [''])[0].toLowerCase().replace(/[^a-z0-9.]/g, '');
+
       var blob = await client.upload('ref/' + stem + ext, file, {
         access: 'public',
         handleUploadUrl: '/api/upload',
         onUploadProgress: function (p) {
-          say(state, 'Uploading ' + file.name + of + ' \u2014 ' + Math.round(p.percentage) + '%');
+          var pct = Math.round(p.percentage);
+          say(state, 'Uploading ' + file.name + of + ' \u2014 ' + pct + '%', 'busy');
+          setProgress(wrap, pct);
         }
       });
+      setProgress(wrap, null);
       return blob.url;
-    }
-
-    // What a model needs uploaded, if anything. One entry per file field; the
-    // key is where its link waits until Generate is pressed. Two models take
-    // files and they take different ones, so the fields are described rather
-    // than hard-coded twice.
-    function sourceSpec(model) {
-      var send = model && model.send;
-      if (!send) return null;
-      if (send.sources) return [
-        { key: 'video', id: 'src-video', many: false, measure: true,
-          label: 'Motion video (mp4, mov or webm)',
-          accept: 'video/mp4,video/quicktime,video/webm' },
-        { key: 'images', id: 'src-images', many: true,
-          label: 'Images to move (jpg, png or webp)',
-          accept: 'image/jpeg,image/png,image/webp' }
-      ];
-      if (send.frames) return [
-        { key: 'firstFrame', id: 'src-first', many: false,
-          label: 'Start frame (jpg, png or webp)',
-          accept: 'image/jpeg,image/png,image/webp' },
-        { key: 'lastFrame', id: 'src-last', many: false, optional: true,
-          label: 'End frame \u2014 optional, the shot ends here',
-          accept: 'image/jpeg,image/png,image/webp' }
-      ];
-      return null;
-    }
-
-    function clearSource(spec) {
-      SOURCES[spec.key] = spec.many ? [] : null;
-      if (spec.measure) SOURCES.seconds = null;
     }
 
     // Files upload as soon as they are chosen rather than on Generate, so the
     // wait happens while the prompt is still being written.
-    function wire(input, state, spec) {
-      input.onchange = async function () {
+    function wire(input, state, wrap, spec) {
+      async function take() {
         var files = Array.prototype.slice.call(input.files || []);
         clearSource(spec);
+        showPreview(wrap, null);
+        setProgress(wrap, null);
         try { paintCost(); } catch (e) {}
 
         if (!files.length) { say(state, 'Nothing chosen yet.'); return; }
@@ -1524,7 +1556,9 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
         try {
           var urls = [];
           for (var i = 0; i < files.length; i++) {
-            urls.push(await sendOne(files[i], state, i + 1, files.length));
+            var url = await sendOne(files[i], state, wrap, i + 1, files.length);
+            urls.push(url);
+            addPreview(wrap, url, files[i].type.indexOf('video') === 0 ? 'video' : 'image', files[i].name);
           }
           if (spec.many) {
             SOURCES[spec.key] = urls;
@@ -1534,8 +1568,8 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
             if (spec.measure) {
               SOURCES.seconds = await videoSeconds(files[0]);
               say(state, SOURCES.seconds
-                ? 'Video ready \u2014 ' + Math.round(SOURCES.seconds) + ' seconds.'
-                : 'Video ready. Its length could not be read here, so the run is priced at the maximum.', 'ok');
+                ? 'Ready \u2014 ' + Math.round(SOURCES.seconds) + ' seconds.'
+                : 'Ready. Its length could not be read here, so the run is priced at the maximum.', 'ok');
             } else {
               say(state, 'Ready.', 'ok');
             }
@@ -1543,13 +1577,29 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
           try { paintCost(); } catch (e) {}
         } catch (err) {
           clearSource(spec);
-          say(state, err.message || 'That upload did not go through.', 'bad');
+          showPreview(wrap, null);
+          setProgress(wrap, null);
+          // Say what actually went wrong. "Failed to retrieve the client token"
+          // is what the uploader says when the server refused the request, and
+          // the usual reason for that is not being signed in.
+          var why = String((err && err.message) || 'That upload did not go through.');
+          if (/client token|not authenticated|sign in/i.test(why)) {
+            why = 'Sign in before uploading \u2014 the file never left this browser.';
+          }
+          say(state, why, 'bad');
           input.value = '';
           try { paintCost(); } catch (e) {}
         } finally {
           input.disabled = false;
         }
-      };
+      }
+
+      // A reload can hand the input back its file without firing anything, so
+      // the picker would sit there showing a filename under the words "nothing
+      // chosen yet". Listen for both events and check what is already there.
+      input.addEventListener('change', take);
+      input.addEventListener('input', take);
+      if (input.files && input.files.length) setTimeout(take, 0);
     }
 
     function sourceBlock(spec) {
@@ -1568,14 +1618,25 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       input.accept = spec.accept;
       if (spec.many) input.multiple = true;
 
+      var preview = document.createElement('div');
+      preview.className = 'source-preview';
+      preview.hidden = true;
+
+      var bar = document.createElement('div');
+      bar.className = 'source-bar';
+      bar.hidden = true;
+      bar.appendChild(document.createElement('span'));
+
       var state = document.createElement('div');
       state.className = 'source-state';
       state.textContent = 'Nothing chosen yet.';
 
       wrap.appendChild(label);
       wrap.appendChild(input);
+      wrap.appendChild(preview);
+      wrap.appendChild(bar);
       wrap.appendChild(state);
-      wire(input, state, spec);
+      wire(input, state, wrap, spec);
       return wrap;
     }
 
