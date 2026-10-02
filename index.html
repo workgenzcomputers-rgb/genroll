@@ -457,6 +457,18 @@ header{backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20
   .composer-body > .generate-row small{text-align:left}
 }
 
+/* The @ menu now carries uploaded files as well as saved elements, so it
+   needs a heading per group and a thumbnail small enough to stay a list. */
+.mentions .mention-head{margin:0;padding:9px 12px 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.55}
+.mentions .mention-head + button{border-top:0}
+.mentions .mention-ref{display:flex;align-items:center;gap:10px;text-align:left}
+.mentions .mention-ref img,
+.mentions .mention-ref video{width:34px;height:34px;flex:0 0 auto;object-fit:cover;border-radius:7px;background:rgba(255,255,255,.06)}
+
+/* Retired: references used to have a second box here that never left the
+   browser. Hidden in script too; this is only so it cannot flash on load. */
+#reference-uploads{display:none !important}
+
 </style></head>
 <body>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>
@@ -900,7 +912,34 @@ let surpriseIndex=0;const SURPRISES={image:['An orange paper lantern floating ab
 function mentionToken(){const p=$('#prompt');return p.value.slice(0,p.selectionStart).match(/@([A-Za-z0-9_-]*)$/)}
 function closeMentions(){$('#mentions').hidden=true;$('#prompt').setAttribute('aria-expanded','false')}
 function insertElement(id){const e=elements.find(x=>x.id===id);if(!e)return;const p=$('#prompt'),match=mentionToken(),end=p.selectionStart,start=match?end-match[0].length:end;const token='@'+e.tag+' ';if(p.value.length-(end-start)+token.length>p.maxLength){toast('This draft is too long to add an element.');return}p.setRangeText(token,start,end,'end');closeMentions();p.focus()}
-function suggest(){if(suppressMention)return;const match=mentionToken();if(!match){closeMentions();return}const matches=elements.filter(e=>e.tag.toLowerCase().includes(match[1].toLowerCase()));$('#mentions').innerHTML=matches.length?matches.map(e=>`<button type="button" data-mention="${e.id}">@${esc(e.tag)} <small>· ${esc(e.name)}</small></button>`).join(''):'<button type="button" id="add-first-element">No matching elements — open library</button>';$('#mentions').hidden=false;$('#prompt').setAttribute('aria-expanded','true');$$('[data-mention]').forEach(b=>b.onclick=()=>insertElement(b.dataset.mention));if($('#add-first-element'))$('#add-first-element').onclick=()=>{setPage('elements');$('#element-name').focus()}}
+// A file that is already uploaded can be named in the prompt, so a sentence
+// can say which image it means. The file is sent either way — the tag is
+// only how the prompt refers to it, never what attaches it.
+function uploadedRefs(){var S=window.GENROLL_REFS;if(!S)return[];var out=[];
+ if(S.video)out.push({tag:'motion',name:'motion video',url:S.video,kind:'video'});
+ (S.images||[]).forEach(function(u,i){out.push({tag:'image'+(i+1),name:'image '+(i+1),url:u,kind:'image'})});
+ if(S.firstFrame)out.push({tag:'start',name:'start frame',url:S.firstFrame,kind:'image'});
+ if(S.lastFrame)out.push({tag:'end',name:'end frame',url:S.lastFrame,kind:'image'});
+ return out}
+function insertTag(tag){const p=$('#prompt'),match=mentionToken(),end=p.selectionStart,start=match?end-match[0].length:end;const token='@'+tag+' ';if(p.value.length-(end-start)+token.length>p.maxLength){toast('This draft is too long to add a reference.');return}p.setRangeText(token,start,end,'end');closeMentions();p.focus()}
+function refPicker(){return document.querySelector('.source-field input[type=file]')}
+// Typing @ is also how the picker is reached, so the composer no longer has
+// to carry an upload box of its own under the prompt.
+function openPicker(){const f=refPicker();closeMentions();if(!f){toast('This model takes no reference file.');$('#prompt').focus();return}const box=f.closest('.source-field');if(box)box.scrollIntoView({block:'nearest'});f.click()}
+function suggest(){if(suppressMention)return;const match=mentionToken();if(!match){closeMentions();return}
+ const needle=match[1].toLowerCase();
+ const refs=uploadedRefs().filter(r=>r.tag.indexOf(needle)===0||r.name.indexOf(needle)>-1);
+ const matches=elements.filter(e=>e.tag.toLowerCase().includes(needle));
+ let html='';
+ if(refs.length)html+='<p class="mention-head">Uploaded references</p>'+refs.map(function(r){const thumb=r.kind==='video'?'<video src="'+esc(r.url)+'#t=0.1" muted playsinline preload="metadata"></video>':'<img src="'+esc(r.url)+'" alt="">';return '<button type="button" class="mention-ref" data-ref-tag="'+esc(r.tag)+'">'+thumb+'<span>@'+esc(r.tag)+' <small>· '+esc(r.name)+'</small></span></button>'}).join('');
+ if(matches.length)html+='<p class="mention-head">Your elements</p>'+matches.map(e=>'<button type="button" data-mention="'+e.id+'">@'+esc(e.tag)+' <small>· '+esc(e.name)+'</small></button>').join('');
+ if(refPicker())html+='<button type="button" id="mention-upload">＋ Upload a reference file…</button>';
+ if(!refs.length&&!matches.length)html+='<button type="button" id="add-first-element">Open your element library</button>';
+ $('#mentions').innerHTML=html;$('#mentions').hidden=false;$('#prompt').setAttribute('aria-expanded','true');
+ $$('[data-mention]').forEach(b=>b.onclick=()=>insertElement(b.dataset.mention));
+ $$('[data-ref-tag]').forEach(function(b){b.onclick=function(){insertTag(b.dataset.refTag)};const v=b.querySelector('video');if(v){b.onmouseenter=function(){const p=v.play();if(p&&p.catch)p.catch(function(){})};b.onmouseleave=function(){v.pause();try{v.currentTime=0.1}catch(e){}}}});
+ if($('#mention-upload'))$('#mention-upload').onclick=openPicker;
+ if($('#add-first-element'))$('#add-first-element').onclick=()=>{setPage('elements');$('#element-name').focus()}}
 $('#prompt').addEventListener('input',suggest);$('#prompt').addEventListener('keydown',e=>{if(e.key==='Escape')closeMentions();if(e.key==='ArrowDown'&&!$('#mentions').hidden){e.preventDefault();$('#mentions button')?.focus()}});$('#mentions').addEventListener('keydown',e=>{const choices=$$('#mentions button'),i=choices.indexOf(document.activeElement);if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();choices[(i+(e.key==='ArrowDown'?1:-1)+choices.length)%choices.length]?.focus()}if(e.key==='Escape'){closeMentions();$('#prompt').focus()}});document.addEventListener('click',e=>{if(!e.target.closest('.prompt-area'))closeMentions();if(!e.target.closest('.aspect-select')&&$('.aspect-select'))$('.aspect-select').open=false});
 function renderCatalog(){const groups=[['Image',CATALOG.image],['Video',CATALOG.video],['Audio · Speech',CATALOG.audio.speech],['Audio · Lipsync',CATALOG.audio.lipsync],['Audio · Voice Clone',CATALOG.audio.clone],['Audio · Dub',CATALOG.audio.dub]];$('#catalog').innerHTML=groups.map(([name,models])=>`<section class="catalog-group"><h2 class="group-title">${icon(name.startsWith('Image')?'image':name.startsWith('Video')?'video':'audio')}${name}<span class="counter">${models.length}</span></h2><div class="catalog-grid">${models.map(m=>`<article class="model-card glass"><div class="row between"><span class="provider">${m.provider}</span><span class="status ${m.status}">${m.status}</span></div><h3>${m.name}</h3><code>${m.localId?'API model ID unconfirmed':m.id}</code><ul>${m.limits.map(l=>`<li>${l}</li>`).join('')}${m.references?`<li>${esc(m.references.note)}</li>`:''}</ul><small>${m.pricing?`${m.pricing.from?"From ":""}${(m.pricing.usdPerSecond*m.pricing.usdINR*m.pricing.markup).toFixed(2)} credits/sec · estimate`:"Credit quote pending · provider cost + 10%"}</small>${m.references?`<a href="${m.references.source}" target="_blank" rel="noopener noreferrer">Reference limits source ↗</a>`:""}<a href="${m.source}" target="_blank" rel="noopener noreferrer">Official documentation ↗</a>${m.extraSource?`<a href="${m.extraSource}" target="_blank" rel="noopener noreferrer">Duration source ↗</a>`:''}</article>`).join('')}</div></section>`).join('')}
 const money=n=>'₹'+Number(n).toLocaleString('en-IN',{maximumFractionDigits:2});
@@ -946,7 +985,11 @@ function refError(p,list,item){
 }
 function inspectReference(file,type){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),el=document.createElement(type==='image'?'img':type);let done=false;const timer=setTimeout(()=>finish(false),10000);function finish(ok){if(done)return;done=true;clearTimeout(timer);if(ok)resolve({file,type,url,name:file.name,width:el.naturalWidth||el.videoWidth||0,height:el.naturalHeight||el.videoHeight||0,duration:type==='image'?0:el.duration});else{URL.revokeObjectURL(url);reject(new Error('Cannot read '+file.name+'. Try a browser-supported format.'))}el.removeAttribute('src');if(type!=='image')el.load()}el.onload=()=>finish(true);el.onloadedmetadata=()=>finish(Number.isFinite(el.duration));el.onerror=()=>finish(false);el.preload='metadata';el.src=url})}
 function renderReferences(){
- const host=$('#reference-uploads');host.hidden=tool==='audio';if(host.hidden)return;
+ // This box held references that never left the browser, directly under the
+ // prompt, where it read as an upload that did something. The real picker is
+ // in the model fields and @ in the prompt is how a reference is named, so
+ // this one is retired rather than deleted: the page still looks it up.
+ const host=$('#reference-uploads');host.hidden=true;host.innerHTML='';return;
  const m=currentModel(),p=m.references,list=refList(),valid=m.modes.includes(mode),types=['image','video','audio'].filter(t=>p[t]);
  const count=types.map(t=>list.filter(x=>x.type===t).length+'/'+p[t]+' '+t).join(' · ');
  host.innerHTML=`<div class="ref-row"><button type="button" class="ref-add" id="reference-add" ${!valid||referenceBusy?'disabled':''} aria-label="Upload reference ${types.join(' or ')}"><b aria-hidden="true">+</b><span>${p.label||'Add reference'}</span></button><span class="ref-count">${count}</span></div><input id="reference-file" type="file" hidden multiple accept="${types.map(t=>t==='image'?'image/jpeg,image/png,image/webp':t==='video'?'video/mp4,video/quicktime':'audio/mpeg,audio/wav,audio/mp4').join(',')}"><div class="ref-list">${list.map((r,i)=>`<figure class="ref-card">${r.type==='image'?`<img src="${r.url}" alt="${esc(r.name)}">`:r.type==='video'?`<video src="${r.url}" muted preload="metadata"></video>`:`<div class="ref-audio">${icon('audio')}</div>`}<button type="button" data-ref-remove="${i}" aria-label="Remove reference ${esc(r.name)}">×</button><figcaption title="${esc(r.name)}">${p.label&&p.image===2?(i===0?'First frame':'Last frame'):esc(r.name)}</figcaption></figure>`).join('')}</div>${p.unverified?'<p class="ref-note"><span class="status unverified">Limit unverified</span> One draft reference in this preview.</p>':p.partial?'<p class="ref-note">Frame workflow · other reference limits unverified</p>':''}<p class="ref-note">Local draft only · 200 MB preview cap per file</p><div id="reference-error" class="ref-error" role="status" aria-live="polite"></div>`;
@@ -995,6 +1038,9 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
   // Motion transfer is the one model here that takes files rather than only
   // words. The uploaded links live here between the picker and the request.
   var SOURCES = { video: null, images: [], seconds: null, firstFrame: null, lastFrame: null };
+  // The @ menu lives in an earlier script block and has no other way to know
+  // what is attached. The same object, not a copy, so it is never stale.
+  window.GENROLL_REFS = SOURCES;
 
   // The job that is running right now, if any. It gets a tile of its own at
   // the head of the Generations grid so the wait has somewhere to live.
@@ -1600,6 +1646,43 @@ renderModels();renderCatalog();renderPlans();renderMedia();renderElements();setP
       input.addEventListener('change', take);
       input.addEventListener('input', take);
       if (input.files && input.files.length) setTimeout(take, 0);
+    }
+
+    // Which files a model actually needs. Motion transfer copies the movement
+    // of one clip onto stills, so it takes a video plus the images to move.
+    // The first-last-frame models take the two frames the shot runs between.
+    // Every other model takes none and shows no picker at all.
+    //
+    // These keys are the ones the request builder reads back out of SOURCES,
+    // so renaming one here silently stops the file being sent.
+    function sourceSpec(model) {
+      var send = model && model.send;
+      if (!send) return null;
+      if (send.sources) {
+        return [
+          { id: 'source-video', key: 'video', measure: true,
+            label: 'Motion video', accept: 'video/mp4,video/quicktime,video/webm' },
+          { id: 'source-images', key: 'images', many: true,
+            label: 'Images to move (up to 8)', accept: 'image/jpeg,image/png,image/webp' }
+        ];
+      }
+      if (send.frames) {
+        return [
+          { id: 'source-first', key: 'firstFrame',
+            label: 'Start frame', accept: 'image/jpeg,image/png,image/webp' },
+          { id: 'source-last', key: 'lastFrame',
+            label: 'End frame (optional)', accept: 'image/jpeg,image/png,image/webp' }
+        ];
+      }
+      return null;
+    }
+
+    // Emptying a picker, or an upload that failed, has to take the link with
+    // it. Otherwise the request still carries a file nobody can see any more.
+    function clearSource(spec) {
+      if (spec.many) SOURCES[spec.key] = [];
+      else SOURCES[spec.key] = null;
+      if (spec.measure) SOURCES.seconds = null;
     }
 
     function sourceBlock(spec) {
