@@ -129,10 +129,25 @@ module.exports = async (req, res) => {
     await refundIfDead(id, status);
     if (status === 'completed') await remember(id, url);
 
+    // When a job dies the only thing anyone wants to know is why, and the page
+    // was saying 'the provider could not finish this job' because that was all
+    // it had. The provider documents no field for the reason, so take whichever
+    // one it sends and write the whole payload to the log for the ones it does
+    // not: a job that fails in three seconds has a cause worth reading.
+    let detail = null;
+    if (status === 'failed' || status === 'nsfw') {
+      const first = [data.message, data.detail, data.error, data.failure_reason, data.reason, data.error_message]
+        .find((v) => v !== undefined && v !== null && v !== '');
+      detail = typeof first === 'object' ? JSON.stringify(first) : (first || null);
+      if (typeof detail === 'string') detail = detail.slice(0, 400);
+      console.error('job_failed', id, status, JSON.stringify(data).slice(0, 1200));
+    }
+
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       status,
       url,
+      detail,
       // 'nsfw' and 'failed' are terminal — the UI should stop polling on them.
       terminal: ['completed', 'failed', 'nsfw'].includes(status)
     });
